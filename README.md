@@ -1,6 +1,6 @@
 # T7 Chat
 
-Production-ready, multi-provider AI chat with BYOK, email authentication, encrypted provider keys, responsive UI, and Cloudflare Workers deployment.
+Production-ready, multi-provider AI chat with BYOK, email authentication, encrypted provider keys, responsive UI, streaming responses, and Cloudflare Workers deployment.
 
 ## Requirements
 
@@ -79,6 +79,10 @@ npx wrangler secret put AUTH_ENCRYPTION_KEY
 ```
 
 Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_APP_URL` as non-secret Worker variables in the Cloudflare dashboard or `wrangler.jsonc`. Never commit secret values.
+
+## Chat controls
+
+Responses stream incrementally over SSE and render Markdown/code as tokens arrive. The composer includes a persisted Low, Medium, or High response-depth setting. It is passed to providers that support native reasoning controls and remains a safe client preference for other providers.
 
 ## Providers
 

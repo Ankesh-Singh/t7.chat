@@ -1,18 +1,18 @@
-import type { LLMProvider, ChatMessage, ModelId, InferenceLog } from './types'
+import type { LLMProvider, ChatMessage, ModelId, InferenceLog, ChatOptions } from './types'
 import { sendLog } from './logger'
 import { redactPII } from '../pii'
 
 export class LLMClient {
   constructor(private provider: LLMProvider) {}
 
-  async *chat(messages: ChatMessage[], model: ModelId, sessionId: string, apiKey: string, signal?: AbortSignal) {
+  async *chat(messages: ChatMessage[], model: ModelId, sessionId: string, apiKey: string, options?: ChatOptions) {
     const start = Date.now()
     let output = ''
     let status: InferenceLog['status'] = 'success'
     let error: string | undefined
 
     try {
-      for await (const token of this.provider.chat(messages, model, apiKey, signal)) {
+      for await (const token of this.provider.chat(messages, model, apiKey, options)) {
         output += token
         yield token
       }

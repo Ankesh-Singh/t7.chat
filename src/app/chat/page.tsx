@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { BarChart3, Menu, PanelLeftClose, PanelLeftOpen, Plus } from 'lucide-react'
+import { BarChart3, KeyRound, Menu, PanelLeftClose, PanelLeftOpen, Plus } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
 import { useProviderKeys } from '@/hooks/useProviderKeys'
 import ConversationList from '@/components/chat/ConversationList'
@@ -49,7 +49,6 @@ export default function ChatPage() {
                 setIsSidebarOpen(false)
               }}
               onClose={() => setIsSidebarOpen(false)}
-              onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenProfile={() => setIsAuthOpen(true)}
               user={auth.user}
             />
@@ -81,6 +80,9 @@ export default function ChatPage() {
           <Link href="/dashboard" className="icon-button" aria-label="Open analytics">
             <BarChart3 />
           </Link>
+          <button onClick={() => setIsSettingsOpen(true)} className="icon-button" aria-label="Manage provider API keys" title="Manage provider API keys">
+            <KeyRound />
+          </button>
         </header>
 
         <ChatWindow
@@ -96,6 +98,8 @@ export default function ChatPage() {
           isStreaming={chat.isStreaming}
           model={chat.model}
           setModel={chat.setModel}
+          reasoningEffort={chat.reasoningEffort}
+          setReasoningEffort={chat.setReasoningEffort}
           keys={providerKeys.keys}
           onOpenSettings={() => setIsSettingsOpen(true)}
           requireAuthentication={auth.configured && !auth.user}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import { ArrowUp, Check, ChevronDown, Filter, Loader2, Search, Settings2, Square, Sparkles } from 'lucide-react'
-import type { ModelOption, Provider } from '@/lib/sdk/types'
+import type { ModelOption, Provider, ReasoningEffort } from '@/lib/sdk/types'
 import { FALLBACK_MODELS, PROVIDERS } from '@/constants/models'
 import { useToast } from '@/components/ui/toast'
 
@@ -22,12 +22,14 @@ interface Props {
   isStreaming: boolean
   model: ModelOption
   setModel: (model: ModelOption) => void
+  reasoningEffort: ReasoningEffort
+  setReasoningEffort: (effort: ReasoningEffort) => void
   keys: Partial<Record<Provider, string>>
   onOpenSettings: () => void
   requireAuthentication?: boolean
   onRequireAuth?: () => void
 }
-export default function ChatInput({ onSend, onStop, isStreaming, model, setModel, keys, onOpenSettings, requireAuthentication, onRequireAuth }: Props) {
+export default function ChatInput({ onSend, onStop, isStreaming, model, setModel, reasoningEffort, setReasoningEffort, keys, onOpenSettings, requireAuthentication, onRequireAuth }: Props) {
   const [value, setValue] = useState('')
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -218,6 +220,12 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
               <span className="max-w-44 truncate">{activeModel.label}</span>
               <ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
+
+            <select value={reasoningEffort} onChange={event => setReasoningEffort(event.target.value as ReasoningEffort)} disabled={isStreaming} className="h-8 rounded-lg border border-border bg-transparent px-2 text-[11px] font-medium text-muted-foreground outline-none hover:bg-muted" aria-label="Response depth">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
 
             <div className="flex items-center gap-2">
               <span className="hidden text-[11px] text-muted-foreground/70 sm:block">Enter to send</span>

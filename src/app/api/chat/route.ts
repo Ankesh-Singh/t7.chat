@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { LLMClient } from '@/lib/sdk'
 import { byokProviders } from '@/lib/sdk/providers/byok'
 import { PROVIDERS } from '@/constants/models'
-import type { ChatMessage, Provider } from '@/lib/sdk/types'
+import type { ChatMessage, Provider, ReasoningEffort } from '@/lib/sdk/types'
 import { supabaseServer } from '@/lib/supabase/server'
 import { validateProviderKey } from '@/lib/security/provider-key'
 import { getAuthenticatedUser } from '@/lib/auth/server'
@@ -13,6 +13,7 @@ type ChatBody = {
   provider?: Provider
   apiKey?: string
   sessionId?: string
+  reasoningEffort?: ReasoningEffort
 }
 function event(data: unknown) {
   return `data: ${JSON.stringify(data)}\n\n`
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Invalid JSON body.' }, { status: 400 })
   }
 
-  const { messages, model, provider, apiKey, sessionId } = body
+  const { messages, model, provider, apiKey, sessionId, reasoningEffort } = body
   if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100 || messages.some(message => !message || typeof message.content !== 'string' || message.content.length > 100_000) || !model || !provider || !sessionId || !apiKey?.trim()) {
     return Response.json({ error: 'Choose a model and add that provider API key first.' }, { status: 400 })
   }
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let fullOutput = ''
       try {
-        for await (const token of client.chat(messages, model, sessionId, apiKey, req.signal)) {
+        for await (const token of client.chat(messages, model, sessionId, apiKey, { signal: req.signal, reasoningEffort })) {
           fullOutput += token
           controller.enqueue(encoder.encode(event({ text: token })))
         }

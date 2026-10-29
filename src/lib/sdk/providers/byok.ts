@@ -1,4 +1,4 @@
-import type { ChatMessage, LLMProvider, ModelId, Provider } from '../types'
+import type { ChatMessage, LLMProvider, ModelId, Provider, ChatOptions } from '../types'
 
 type JsonRecord = Record<string, unknown>
 
@@ -44,15 +44,19 @@ function authHeaders(apiKey: string) {
   return { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
 }
 
+function isReasoningModel(model: string) {
+  return /^(o[1-9]|gpt-[5-9]|.*reason)/i.test(model)
+}
+
 function openAICompatible(id: Provider, baseUrl: string): LLMProvider {
   return {
     id,
-    async *chat(messages: ChatMessage[], model: ModelId, apiKey: string, signal?: AbortSignal) {
+    async *chat(messages: ChatMessage[], model: ModelId, apiKey: string, options?: ChatOptions) {
       const response = await checkedFetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: authHeaders(apiKey),
         body: JSON.stringify({ model, messages, stream: true }),
-        signal,
+        signal: options?.signal,
       })
       yield* streamSse(response, data => {
         const choices = data.choices as JsonRecord[] | undefined
@@ -66,24 +70,24 @@ function openAICompatible(id: Provider, baseUrl: string): LLMProvider {
 export const byokProviders: Record<Provider, LLMProvider> = {
   openai: {
     id: 'openai',
-    async *chat(messages, model, apiKey, signal) {
+    async *chat(messages, model, apiKey, options) {
       const response = await checkedFetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: authHeaders(apiKey),
-        body: JSON.stringify({ model, input: messages, stream: true }),
-        signal,
+        body: JSON.stringify({ model, input: messages, stream: true, ...(isReasoningModel(model) && options?.reasoningEffort ? { reasoning: { effort: options.reasoningEffort } } : {}) }),
+        signal: options?.signal,
       })
       yield* streamSse(response, data => data.type === 'response.output_text.delta' && typeof data.delta === 'string' ? data.delta : undefined)
     },
   },
   anthropic: {
     id: 'anthropic',
-    async *chat(messages, model, apiKey, signal) {
+    async *chat(messages, model, apiKey, options) {
       const response = await checkedFetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, max_tokens: 4096, messages, stream: true }),
-        signal,
+        signal: options?.signal,
       })
       yield* streamSse(response, data => {
         const delta = data.delta as JsonRecord | undefined
@@ -93,7 +97,7 @@ export const byokProviders: Record<Provider, LLMProvider> = {
   },
   google: {
     id: 'google',
-    async *chat(messages, model, apiKey, signal) {
+    async *chat(messages, model, apiKey, options) {
       const contents = messages.map(message => ({
         role: message.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: message.content }],
@@ -102,7 +106,7 @@ export const byokProviders: Record<Provider, LLMProvider> = {
         method: 'POST',
         headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents }),
-        signal,
+        signal: options?.signal,
       })
       yield* streamSse(response, data => {
         const candidates = data.candidates as JsonRecord[] | undefined

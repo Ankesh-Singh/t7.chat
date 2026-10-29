@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS } from '@/constants/models'
-import type { ChatMessage, ModelOption } from '@/lib/sdk/types'
+import type { ChatMessage, ModelOption, ReasoningEffort } from '@/lib/sdk/types'
 import type { Provider } from '@/lib/sdk/types'
 import { getAuthHeaders } from '@/lib/auth/client'
 
@@ -62,11 +62,20 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [sessionId, setSessionId] = useState(getInitialSession)
   const [model, setModelState] = useState<ModelOption>(getInitialModel)
+  const [reasoningEffort, setReasoningEffortState] = useState<ReasoningEffort>(() => {
+    if (typeof window === 'undefined') return 'medium'
+    return (localStorage.getItem('t7_reasoning_effort') as ReasoningEffort | null) ?? 'medium'
+  })
   const abortRef = useRef<AbortController | null>(null)
 
   const setModel = useCallback((next: ModelOption) => {
     setModelState(next)
     localStorage.setItem('t7_model', `${next.provider}:${next.id}`)
+  }, [])
+
+  const setReasoningEffort = useCallback((next: ReasoningEffort) => {
+    setReasoningEffortState(next)
+    localStorage.setItem('t7_reasoning_effort', next)
   }, [])
 
   const newSession = useCallback(() => {
@@ -107,7 +116,7 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ messages: requestMessages, model: activeModel.id, provider: activeModel.provider, apiKey, sessionId }),
+        body: JSON.stringify({ messages: requestMessages, model: activeModel.id, provider: activeModel.provider, apiKey, sessionId, reasoningEffort }),
         signal: controller.signal,
       })
       if (!response.ok) {
@@ -149,7 +158,7 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
       setIsStreaming(false)
       abortRef.current = null
     }
-  }, [keys, sessionId])
+  }, [keys, reasoningEffort, sessionId])
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isStreaming || !sessionId) return
@@ -171,5 +180,5 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
 
   const stopStreaming = useCallback(() => abortRef.current?.abort(), [])
 
-  return { messages, isStreaming, sessionId, model, setModel, sendMessage, regenerate, stopStreaming, newSession, loadSession }
+  return { messages, isStreaming, sessionId, model, setModel, reasoningEffort, setReasoningEffort, sendMessage, regenerate, stopStreaming, newSession, loadSession }
 }

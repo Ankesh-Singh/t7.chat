@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
-import { Check, KeyRound, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useConversations } from '@/hooks/useConversations'
 import type { StoredConversation } from '@/hooks/useChat'
 import type { User } from '@supabase/supabase-js'
@@ -19,11 +19,10 @@ interface Props {
   onResume: (id: string, messages: ChatMessage[]) => void
   onNew: () => void
   onClose: () => void
-  onOpenSettings: () => void
   onOpenProfile: () => void
   user: User | null
 }
-export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenSettings, onOpenProfile, user }: Props) {
+export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenProfile, user }: Props) {
   const { sessions, loading, resume, cancel, rename } = useConversations()
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -174,9 +173,6 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
       </div>
 
       <div className="border-t border-border/70 p-2.5">
-        <button onClick={onOpenSettings} className="mb-2 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground">
-          <KeyRound className="h-3.5 w-3.5" /> Connect provider keys
-        </button>
         <button onClick={onOpenProfile} className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-sidebar-accent">
           <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">{(user?.email?.[0] || 'G').toUpperCase()}</span>

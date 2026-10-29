@@ -1,10 +1,16 @@
 export type Provider = 'openai' | 'anthropic' | 'google' | 'groq' | 'mistral' | 'xai' | 'openrouter'
 
 export type ModelId = string
+export type ReasoningEffort = 'low' | 'medium' | 'high'
+
+export interface ChatOptions {
+  signal?: AbortSignal
+  reasoningEffort?: ReasoningEffort
+}
 
 export interface LLMProvider {
   id: Provider
-  chat(messages: ChatMessage[], model: ModelId, apiKey: string, signal?: AbortSignal): AsyncGenerator<string>
+  chat(messages: ChatMessage[], model: ModelId, apiKey: string, options?: ChatOptions): AsyncGenerator<string>
 }
 export interface ChatMessage {
   role: 'user' | 'assistant'

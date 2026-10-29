@@ -40,6 +40,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   const { toast } = useToast()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const activeModel = model
+  const connectedProvider = PROVIDERS.find(provider => Boolean(keys[provider.id]))?.id
 
   useEffect(() => {
     if (!isStreaming) textareaRef.current?.focus()
@@ -110,8 +111,9 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
               <button
                 key={provider.id}
                 onClick={() => selectProvider(provider.id)}
+                disabled={Boolean(connectedProvider && connectedProvider !== provider.id)}
                 title={provider.label}
-                className={`relative flex h-10 w-10 items-center justify-center rounded-xl text-[10px] font-semibold transition-colors ${providerTab === provider.id ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                className={`relative flex h-10 w-10 items-center justify-center rounded-xl text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-25 ${providerTab === provider.id ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >
                 {PROVIDER_LOGOS[provider.id] ? (
                   <Image src={PROVIDER_LOGOS[provider.id] as string} alt="" width={19} height={19} className="provider-logo h-5 w-5 object-contain" />
@@ -230,7 +232,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                   <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${effortOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {effortOpen && (
-                  <div className="effort-menu" role="menu">
+                  <div className="effort-menu flex flex-col" role="menu">
                     {(['low', 'medium', 'high'] as ReasoningEffort[]).map(effort => (
                       <button key={effort} type="button" role="menuitem" onClick={() => { setReasoningEffort(effort); setEffortOpen(false) }} className={`effort-option ${reasoningEffort === effort ? 'is-active' : ''}`}>
                         {effort[0].toUpperCase() + effort.slice(1)}

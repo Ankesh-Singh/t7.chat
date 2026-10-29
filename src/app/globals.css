@@ -247,6 +247,7 @@ button:disabled {
   border-radius: 0.75rem;
   background: color-mix(in srgb, var(--popover) 94%, transparent);
   padding: 0.25rem;
+  flex-direction: column;
   box-shadow: 0 14px 36px rgb(0 0 0 / 0.28);
   backdrop-filter: blur(18px) saturate(130%);
 }

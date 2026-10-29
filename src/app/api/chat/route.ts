@@ -5,6 +5,7 @@ import { PROVIDERS } from '@/constants/models'
 import type { ChatMessage, Provider } from '@/lib/sdk/types'
 import { supabaseServer } from '@/lib/supabase/server'
 import { validateProviderKey } from '@/lib/security/provider-key'
+import { getAuthenticatedUser } from '@/lib/auth/server'
 
 type ChatBody = {
   messages?: ChatMessage[]
@@ -34,9 +35,10 @@ export async function POST(req: NextRequest) {
   }
   const validation = validateProviderKey(provider, apiKey)
   if (!validation.valid) return Response.json({ error: validation.message }, { status: 400 })
+  const user = await getAuthenticatedUser(req)
 
-  if (supabaseServer) {
-    await supabaseServer.from('sessions').upsert({ id: sessionId, last_active: new Date().toISOString() })
+  if (supabaseServer && user) {
+    await supabaseServer.from('sessions').upsert({ id: sessionId, user_id: user.id, last_active: new Date().toISOString() })
     await supabaseServer.from('messages').insert({ session_id: sessionId, role: 'user', content: messages.at(-1)?.content ?? '' })
   }
 
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
           fullOutput += token
           controller.enqueue(encoder.encode(event({ text: token })))
         }
-        if (supabaseServer && fullOutput) {
+        if (supabaseServer && user && fullOutput) {
           await supabaseServer.from('messages').insert({ session_id: sessionId, role: 'assistant', content: fullOutput })
         }
       } catch (error) {

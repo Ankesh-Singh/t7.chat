@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CONVERSATIONS_EVENT, CONVERSATIONS_KEY, type StoredConversation } from './useChat'
 import type { ChatMessage } from '@/lib/sdk/types'
+import { getAuthHeaders } from '@/lib/auth/client'
 
 function readConversations(): StoredConversation[] {
   if (typeof window === 'undefined') return []
@@ -40,11 +41,11 @@ export function useConversations() {
     const next = readConversations().filter(session => session.id !== id)
     localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
     setSessions(next)
-    void fetch('/api/sessions', {
+    void getAuthHeaders().then(authHeaders => fetch('/api/sessions', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ id }),
-    })
+    }))
   }, [])
 
   const rename = useCallback((id: string, title: string) => {

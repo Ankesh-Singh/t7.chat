@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS } from '@/constants/models'
 import type { ChatMessage, ModelOption } from '@/lib/sdk/types'
 import type { Provider } from '@/lib/sdk/types'
+import { getAuthHeaders } from '@/lib/auth/client'
 
 export const CONVERSATIONS_KEY = 't7_conversations'
 export const CONVERSATIONS_EVENT = 't7-conversations-changed'
@@ -73,11 +74,11 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
     localStorage.setItem('t7_session', id)
     setSessionId(id)
     setMessages([])
-    void fetch('/api/sessions', {
+    void getAuthHeaders().then(authHeaders => fetch('/api/sessions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ id }),
-    })
+    }))
   }, [])
 
   const loadSession = useCallback((id: string, nextMessages: ChatMessage[]) => {
@@ -102,9 +103,10 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
     setMessages([...requestMessages, { role: 'assistant', content: '' }])
 
     try {
+      const authHeaders = await getAuthHeaders()
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ messages: requestMessages, model: activeModel.id, provider: activeModel.provider, apiKey, sessionId }),
         signal: controller.signal,
       })

@@ -1,59 +1,89 @@
 # T7 Chat
 
-A fast, production-oriented, multi-provider chat workspace with a Notion-style interface.
+Production-ready, multi-provider AI chat with BYOK, email authentication, encrypted provider keys, responsive UI, and Cloudflare Workers deployment.
 
-## What changed
+## Requirements
 
-- BYOK architecture: users add their own provider key in the app.
-- Guest keys live in browser `sessionStorage`; authenticated users can sync keys to Supabase in encrypted form using `AUTH_ENCRYPTION_KEY`.
-- Email/password authentication is provided by Supabase Auth (JWT sessions). Google auth is intentionally not enabled.
-- The model picker uses the reference interaction: provider rail, searchable live catalog, connected-key indicators, and model metadata.
-- Each provider catalog is fetched from that provider's official `/models` endpoint.
-- Streaming chat supports stop, retry, Markdown, tables, links, and copyable code blocks.
-- Local conversation history includes search, rename, and delete.
-- Notion-style dark mode is the default; light mode is available from the compact top bar toggle and persists per browser.
-- Session search supports title and message-content matches, `Ctrl/Cmd + K` focus, and a second confirmation before deletion.
-- The supplied `/public/applogo.png` asset is used for the favicon, dashboard, sidebar, and empty-state branding.
-- Optional Supabase sync and inference analytics.
-- Cloudflare Workers deployment through OpenNext.
+- Node.js 20+
+- pnpm
+- A Supabase project for accounts, encrypted key storage, and optional analytics
+- Cloudflare account for deployment
 
-## Authentication and encrypted keys
+## Environment
 
-Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `AUTH_ENCRYPTION_KEY` in the deployment environment, then apply `supabase/migrations/001_auth_provider_keys.sql`. The browser receives a Supabase JWT after email/password sign-in. Provider keys are encrypted with AES-GCM on the server before insertion into `provider_keys`; the encryption secret is never exposed to the browser. Without these values, the app remains in local guest mode.
+Copy the template:
 
-## Providers
+```bash
+cp .env.example .env.local
+```
 
-| Provider | Official API | Key page |
-|---|---|---|
-| OpenAI | `https://api.openai.com/v1` | https://platform.openai.com/api-keys |
-| Anthropic | `https://api.anthropic.com/v1` | https://console.anthropic.com/settings/keys |
-| Google Gemini | `https://generativelanguage.googleapis.com/v1beta` | https://aistudio.google.com/apikey |
-| Groq | `https://api.groq.com/openai/v1` | https://console.groq.com/keys |
-| Mistral | `https://api.mistral.ai/v1` | https://console.mistral.ai/api-keys |
-| xAI | `https://api.x.ai/v1` | https://console.x.ai |
-| OpenRouter | `https://openrouter.ai/api/v1` | https://openrouter.ai/settings/keys |
+| Variable | Required | Purpose |
+|---|---:|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Auth | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth | Browser-safe Supabase key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Auth | Server-only database access |
+| `AUTH_ENCRYPTION_KEY` | Auth | 32+ character secret for AES-GCM key encryption |
+| `DATABASE_URL` | Migrations | Supabase Postgres connection string; never needed by the Worker runtime |
+| `NEXT_PUBLIC_APP_URL` | Optional | Enables server-side inference log callbacks |
 
-OpenAI, Groq, Mistral, xAI, and OpenRouter use their OpenAI-compatible chat endpoints. Anthropic uses Messages streaming. Gemini uses `streamGenerateContent`. The provider catalog is refreshed with the user's key, so newly released or account-specific models appear without a redeploy.
+Provider API keys are entered in the app. Do not add provider keys to `.env.local`, Cloudflare, or source control.
 
-## Local setup
+## Supabase setup
+
+1. Create a Supabase project and enable Email/Password under Authentication.
+2. Apply [`supabase/migrations/001_auth_provider_keys.sql`](supabase/migrations/001_auth_provider_keys.sql) and [`supabase/migrations/002_application_schema.sql`](supabase/migrations/002_application_schema.sql) in order, using the Supabase SQL editor or `DATABASE_URL` from a trusted migration machine.
+3. Add the four auth variables above to `.env.local`.
+4. Add the same values to Cloudflare Worker secrets before deployment.
+
+Provider keys are encrypted on the server before insertion into `provider_keys` and scoped to the authenticated user. Guest keys stay in the browser session.
+
+The project uses Supabase Postgres and versioned SQL migrations directly. An additional ORM would add a Node-specific runtime dependency and reduce Cloudflare Worker compatibility, so no unused ORM layer is included.
+
+To apply migrations with `psql`:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/001_auth_provider_keys.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/002_application_schema.sql
+```
+
+In PowerShell, set `$env:DATABASE_URL` for the current session before running the same commands. Do not add `DATABASE_URL` to Cloudflare runtime variables unless a separate migration job needs it.
+
+## Run locally
 
 ```bash
 pnpm install
-copy .env.example .env.local
 pnpm dev
 ```
 
-Open `/chat`, select the model button in the composer, open **API keys**, and add a key for the provider you want to use. Without Supabase, chats remain local to the browser and the dashboard is empty.
+Open `http://localhost:3000/chat`. Run checks with:
 
-## Cloudflare
+```bash
+pnpm lint
+pnpm test
+pnpm build
+```
+
+## Cloudflare deployment
 
 ```bash
 npx wrangler login
 pnpm cf:build
-pnpm cf:preview
 pnpm cf:deploy
 ```
 
-No provider secret is required in Cloudflare. If you enable Supabase, configure its public URL/anon key and service-role key through Cloudflare environment variables/secrets. Set `NEXT_PUBLIC_APP_URL` only if you want inference logs posted back to the deployed app.
+Configure production values as Worker secrets/variables:
 
-The runtime uses Web-standard `fetch`, `ReadableStream`, and `AbortSignal` APIs, so provider requests work on Cloudflare Workers.
+```bash
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+npx wrangler secret put AUTH_ENCRYPTION_KEY
+```
+
+Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_APP_URL` as non-secret Worker variables in the Cloudflare dashboard or `wrangler.jsonc`. Never commit secret values.
+
+## Providers
+
+OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI, and OpenRouter are supported. Models are loaded from each provider’s official API after the user connects a key.
+
+---
+
+MIT License · Built by [Ankesh Singh](https://github.com/Ankesh-Singh) · [Portfolio](https://aanks.xyz) · [LinkedIn](https://www.linkedin.com/in/ankeshsingh07/)

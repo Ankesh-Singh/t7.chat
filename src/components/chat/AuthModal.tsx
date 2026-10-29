@@ -35,7 +35,10 @@ export default function AuthModal({ onClose }: Props) {
         onClose()
       }
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Authentication failed.'
+      const rawMessage = cause instanceof Error ? cause.message : 'Authentication failed.'
+      const message = /rate limit|email rate/i.test(rawMessage)
+        ? 'Supabase email sending is temporarily rate-limited. Wait before trying again, or disable email confirmations in Supabase Auth for local testing.'
+        : rawMessage
       setError(message)
       toast(message, 'error')
     } finally {

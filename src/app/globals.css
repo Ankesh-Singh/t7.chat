@@ -198,6 +198,10 @@ button:disabled {
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 10px 34px rgb(0 0 0 / 0.07);
 }
 
+.composer textarea:focus-visible {
+  outline: none;
+}
+
 .model-trigger {
   display: flex;
   max-width: 12rem;

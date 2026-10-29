@@ -103,7 +103,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   return (
     <div className="relative shrink-0 bg-gradient-to-t from-background via-background to-transparent px-3 pb-3 pt-2 md:px-6 md:pb-5">
       {open && (
-        <div className="model-popover absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-50 mx-auto flex max-h-[min(570px,calc(100dvh-7rem))] max-w-3xl overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl md:left-6 md:right-6">
+        <div className="model-popover absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-50 mx-auto flex max-h-[min(570px,calc(100dvh-7rem))] max-w-3xl overflow-hidden rounded-2xl border-0 bg-popover shadow-2xl md:left-6 md:right-6">
           <aside className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-sidebar/70 py-2 sm:w-16">
             {PROVIDERS.map(provider => (
               <button
@@ -215,17 +215,20 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
           />
 
           <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
-            <button disabled={isStreaming} onClick={openPicker} className="model-trigger" aria-expanded={open}>
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="max-w-44 truncate">{activeModel.label}</span>
-              <ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`} />
-            </button>
-
-            <select value={reasoningEffort} onChange={event => setReasoningEffort(event.target.value as ReasoningEffort)} disabled={isStreaming} className="h-8 rounded-lg border border-border bg-transparent px-2 text-[11px] font-medium text-muted-foreground outline-none hover:bg-muted" aria-label="Response depth">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
+            <div className="flex min-w-0 items-center gap-1">
+              <button disabled={isStreaming} onClick={openPicker} className="model-trigger" aria-expanded={open}>
+                {PROVIDER_LOGOS[activeModel.provider] ? (
+                  <Image src={PROVIDER_LOGOS[activeModel.provider] as string} alt="" width={16} height={16} className="provider-logo h-4 w-4 shrink-0 object-contain" />
+                ) : <Sparkles className="h-3.5 w-3.5" />}
+                <span className="max-w-44 truncate">{activeModel.label}</span>
+                <ChevronDown className={`h-3.5 w-3.5 shrink-0 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`} />
+              </button>
+              <select value={reasoningEffort} onChange={event => setReasoningEffort(event.target.value as ReasoningEffort)} disabled={isStreaming} className="h-8 rounded-lg border-0 bg-transparent px-1.5 text-[11px] font-medium text-muted-foreground outline-none hover:bg-muted" aria-label="Response depth">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
 
             <div className="flex items-center gap-2">
               <span className="hidden text-[11px] text-muted-foreground/70 sm:block">Enter to send</span>

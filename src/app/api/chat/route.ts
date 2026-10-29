@@ -4,6 +4,7 @@ import { byokProviders } from '@/lib/sdk/providers/byok'
 import { PROVIDERS } from '@/constants/models'
 import type { ChatMessage, Provider } from '@/lib/sdk/types'
 import { supabaseServer } from '@/lib/supabase/server'
+import { validateProviderKey } from '@/lib/security/provider-key'
 
 type ChatBody = {
   messages?: ChatMessage[]
@@ -25,12 +26,14 @@ export async function POST(req: NextRequest) {
   }
 
   const { messages, model, provider, apiKey, sessionId } = body
-  if (!Array.isArray(messages) || !model || !provider || !sessionId || !apiKey?.trim()) {
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100 || messages.some(message => !message || typeof message.content !== 'string' || message.content.length > 100_000) || !model || !provider || !sessionId || !apiKey?.trim()) {
     return Response.json({ error: 'Choose a model and add that provider API key first.' }, { status: 400 })
   }
   if (!PROVIDERS.some(item => item.id === provider) || !byokProviders[provider]) {
     return Response.json({ error: 'Unsupported provider.' }, { status: 400 })
   }
+  const validation = validateProviderKey(provider, apiKey)
+  if (!validation.valid) return Response.json({ error: validation.message }, { status: 400 })
 
   if (supabaseServer) {
     await supabaseServer.from('sessions').upsert({ id: sessionId, last_active: new Date().toISOString() })

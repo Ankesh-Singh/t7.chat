@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth/server'
 import { encryptProviderKey, decryptProviderKey } from '@/lib/security/crypto'
 import { supabaseServer } from '@/lib/supabase/server'
 import type { Provider } from '@/lib/sdk/types'
+import { validateProviderKey } from '@/lib/security/provider-key'
 
 const providers: Provider[] = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai', 'openrouter']
 
@@ -26,9 +27,11 @@ export async function PUT(request: NextRequest) {
   const user = await getAuthenticatedUser(request)
   if (!user || !supabaseServer) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
   const body = await request.json() as { provider?: Provider; key?: string }
-  if (!body.provider || !providers.includes(body.provider) || !body.key?.trim()) return NextResponse.json({ error: 'Provider and key are required.' }, { status: 400 })
+  if (!body.provider || !body.key) return NextResponse.json({ error: 'Provider and key are required.' }, { status: 400 })
+  const validation = validateProviderKey(body.provider, body.key)
+  if (!validation.valid) return NextResponse.json({ error: validation.message }, { status: 400 })
   try {
-    const encrypted = await encryptProviderKey(body.key.trim())
+    const encrypted = await encryptProviderKey(validation.value)
     const { error } = await supabaseServer.from('provider_keys').upsert({ user_id: user.id, provider: body.provider, encrypted_key: encrypted.ciphertext, iv: encrypted.iv, updated_at: new Date().toISOString() }, { onConflict: 'user_id,provider' })
     if (error) throw error
     return NextResponse.json({ ok: true })

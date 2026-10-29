@@ -39,7 +39,6 @@ export function useProviderKeys(userId?: string) {
       if (!response.ok) return
       const body = await response.json() as { keys?: Partial<Record<Provider, string>> }
       const next = body.keys ?? {}
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       setKeys(next)
     }
     void load()
@@ -59,7 +58,7 @@ export function useProviderKeys(userId?: string) {
       })
       if (!response.ok) throw new Error((await response.json() as { error?: string }).error || 'Unable to save provider key.')
     }
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    if (!userId) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setKeys(next)
   }, [userId])
 

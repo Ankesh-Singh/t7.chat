@@ -7,6 +7,7 @@ import { PROVIDERS, providerConfig } from '@/constants/models'
 import type { Provider } from '@/lib/sdk/types'
 import type { User } from '@supabase/supabase-js'
 import { useToast } from '@/components/ui/toast'
+import { validateProviderKey } from '@/lib/security/provider-key'
 
 const providerLogos: Partial<Record<Provider, string>> = {
   openai: '/provider/openai.svg', anthropic: '/provider/anthropic.svg', google: '/provider/gemini.svg',
@@ -33,8 +34,13 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
   }
 
   const save = async () => {
+    const validation = validateProviderKey(active, draft)
+    if (!validation.valid) {
+      toast(validation.message, 'error')
+      return
+    }
     try {
-      await onSave(active, draft)
+      await onSave(active, validation.value)
       toast(`${config?.label} key ${user ? 'encrypted and synced to your account' : 'connected for this browser session'}.`, 'success')
     } catch (cause) {
       toast(cause instanceof Error ? cause.message : 'Unable to save provider key.', 'error')

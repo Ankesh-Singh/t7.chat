@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { providerConfig, FALLBACK_MODELS } from '@/constants/models'
 import type { ModelOption, Provider } from '@/lib/sdk/types'
+import { validateProviderKey } from '@/lib/security/provider-key'
 
 function isChatModel(id: string) {
   return !/(embedding|moderation|whisper|transcri|tts|realtime|image|audio|search-preview)/i.test(id)
@@ -24,6 +25,8 @@ export async function POST(req: NextRequest) {
   const apiKey = body.apiKey?.trim()
   const config = provider && providerConfig(provider)
   if (!provider || !config || !apiKey) return NextResponse.json({ error: 'Provider and API key are required.' }, { status: 400 })
+  const validation = validateProviderKey(provider, apiKey)
+  if (!validation.valid) return NextResponse.json({ error: validation.message }, { status: 400 })
 
   try {
     const response = await fetch(config.modelsUrl, {

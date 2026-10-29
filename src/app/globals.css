@@ -216,6 +216,58 @@ button:disabled {
   color: var(--foreground);
 }
 
+.effort-trigger {
+  display: inline-flex;
+  height: 2rem;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0 0.6rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.effort-trigger:hover,
+.effort-trigger[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--muted) 72%, transparent);
+  color: var(--foreground);
+}
+
+.effort-menu {
+  position: absolute;
+  bottom: calc(100% + 0.45rem);
+  left: 50%;
+  z-index: 60;
+  min-width: 6.25rem;
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--popover) 94%, transparent);
+  padding: 0.25rem;
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.effort-option {
+  display: block;
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.effort-option:hover,
+.effort-option.is-active {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
 .send-button {
   display: inline-flex;
   width: 1.9rem;

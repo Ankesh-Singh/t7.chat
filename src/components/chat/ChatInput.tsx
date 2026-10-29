@@ -34,6 +34,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [providerTab, setProviderTab] = useState<Provider>(model.provider)
+  const [effortOpen, setEffortOpen] = useState(false)
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS)
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null)
   const { toast } = useToast()
@@ -223,11 +224,21 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                 <span className="max-w-44 truncate">{activeModel.label}</span>
                 <ChevronDown className={`h-3.5 w-3.5 shrink-0 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
-              <select value={reasoningEffort} onChange={event => setReasoningEffort(event.target.value as ReasoningEffort)} disabled={isStreaming} className="h-8 rounded-lg border-0 bg-transparent px-1.5 text-[11px] font-medium text-muted-foreground outline-none hover:bg-muted" aria-label="Response depth">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+              <div className="relative">
+                <button type="button" disabled={isStreaming} onClick={() => setEffortOpen(value => !value)} className="effort-trigger" aria-label="Response depth" aria-expanded={effortOpen}>
+                  {reasoningEffort[0].toUpperCase() + reasoningEffort.slice(1)}
+                  <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${effortOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {effortOpen && (
+                  <div className="effort-menu" role="menu">
+                    {(['low', 'medium', 'high'] as ReasoningEffort[]).map(effort => (
+                      <button key={effort} type="button" role="menuitem" onClick={() => { setReasoningEffort(effort); setEffortOpen(false) }} className={`effort-option ${reasoningEffort === effort ? 'is-active' : ''}`}>
+                        {effort[0].toUpperCase() + effort.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">

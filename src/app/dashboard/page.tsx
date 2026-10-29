@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRealtimeMetrics } from '@/hooks/useRealtimeMetrics'
 import LatencyChart from '@/components/dashboard/LatencyChart'
@@ -7,6 +8,7 @@ import ThroughputChart from '@/components/dashboard/ThroughputChart'
 import ErrorsChart from '@/components/dashboard/ErrorsChart'
 import Link from 'next/link'
 import { BarChart2, ArrowLeft } from 'lucide-react'
+import ThemeToggle from '@/components/chat/ThemeToggle'
 
 export default function DashboardPage() {
   const { logs: rawLogs, loading } = useRealtimeMetrics()
@@ -14,7 +16,7 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<string>('all')
   const [page, setPage] = useState(0)
 
-  const now = Date.now()
+  const [now] = useState(() => Date.now())
   const filteredByTime = rawLogs.filter(l => {
     if (timeRange === 'all') return true
     const logTime = new Date(l.created_at).getTime()
@@ -45,27 +47,26 @@ export default function DashboardPage() {
   const latColor = latDiff > 0 ? 'text-destructive' : 'text-green-500'
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="flex items-center gap-4 px-6 py-3">
-        <Link href="/chat" className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6 sm:py-4">
+        <div className="flex items-center gap-3">
+          <Link href="/chat" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors" aria-label="Back to chat">
           <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-        </Link>
-        <div className="flex-1">
+          </Link>
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">L</span>
-            </div>
+            <Image src="/applogo.png" alt="T7 Chat" width={28} height={28} className="h-7 w-7 rounded-lg object-cover" />
             <div>
               <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
               <p className="text-xs text-muted-foreground/60">Inference monitoring</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto sm:gap-3">
+          <ThemeToggle />
           <select
             value={timeRange}
             onChange={e => setTimeRange(e.target.value)}
-            className="text-center rounded-lg bg-card border border-border text-foreground px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:flex-none sm:px-3 sm:text-sm"
           >
             <option value="1h">Last 1 hour</option>
             <option value="6h">Last 6 hours</option>
@@ -77,7 +78,7 @@ export default function DashboardPage() {
           <select
             value={modelFilter}
             onChange={e => setModelFilter(e.target.value)}
-            className="text-center rounded-lg bg-card border border-border text-foreground px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:flex-none sm:px-3 sm:text-sm"
           >
             <option value="all">All Models</option>
             {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
@@ -85,9 +86,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="h-px bg-border" />
-
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto px-3 pb-8 sm:px-6 sm:pb-10">
         {loading ? (
           <div className="max-w-6xl mx-auto space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -109,23 +108,30 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="max-w-6xl mx-auto space-y-5">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Avg Latency" value={`${avgLatency}ms`} sub={latTrend} subColor={latColor} />
-              <StatCard label="Total Requests" value={String(totalRequests)} sub={`${modelsUsed} model${modelsUsed > 1 ? 's' : ''}`} />
-              <StatCard label="Total Tokens" value={totalTokens.toLocaleString()} sub="prompt + completion" />
-              <StatCard label="Error Rate" value={`${errorRate}%`} sub={`${errors} / ${totalRequests}`} valueColor={errorRate > 20 ? 'text-destructive' : undefined} />
-            </div>
+          <div className="mx-auto max-w-6xl space-y-4 sm:space-y-5">
+            <SectionCard title="Overview" description="A quick read on your selected inference window.">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
+                <StatCard label="Avg Latency" value={`${avgLatency}ms`} sub={latTrend} subColor={latColor} />
+                <StatCard label="Total Requests" value={String(totalRequests)} sub={`${modelsUsed} model${modelsUsed > 1 ? 's' : ''}`} />
+                <StatCard label="Total Tokens" value={totalTokens.toLocaleString()} sub="prompt + completion" />
+                <StatCard label="Error Rate" value={`${errorRate}%`} sub={`${errors} / ${totalRequests}`} valueColor={errorRate > 20 ? 'text-destructive' : undefined} />
+              </div>
+            </SectionCard>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <LatencyChart logs={filtered} />
-              <ThroughputChart logs={filtered} />
-              <ErrorsChart logs={filtered} />
-            </div>
+            <SectionCard title="Inference performance" description="Latency, throughput, and request health across models.">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+                <LatencyChart logs={filtered} />
+                <ThroughputChart logs={filtered} />
+                <ErrorsChart logs={filtered} />
+              </div>
+            </SectionCard>
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                <h3 className="text-sm font-semibold">Recent Logs</h3>
+            <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div>
+                  <h3 className="text-sm font-semibold">Recent inference logs</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">The latest requests recorded for this workspace.</p>
+                </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-[11px] font-medium text-green-500">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -146,7 +152,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="min-w-[680px] w-full text-sm">
                   <thead>
                     <tr className="text-left">
                       <th className="px-5 py-2.5 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">Time</th>
@@ -185,11 +191,23 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </section>
           </div>
         )}
       </main>
     </div>
+  )
+}
+
+function SectionCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-border bg-card/70 p-3 shadow-sm sm:p-4">
+      <div className="mb-3 px-1 sm:mb-4">
+        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -201,7 +219,7 @@ function StatCard({ label, value, sub, subColor, valueColor }: {
   valueColor?: string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl border border-border bg-background/50 p-3 sm:p-4">
       <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">{label}</p>
       <p className={`text-xl font-bold mt-1.5 ${valueColor || ''}`}>{value}</p>
       <p className={`text-xs mt-1 ${subColor || 'text-muted-foreground/50'}`}>{sub}</p>

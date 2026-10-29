@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "T7chat — Inference Observability",
-  description: "Real-time LLM inference tracing, chat interface, and observability dashboard",
+  title: "T7 Chat — AI workspace",
+  description: "A fast, minimal multi-model AI chat workspace.",
+  icons: {
+    icon: "/applogo.png",
+    apple: "/applogo.png",
+  },
 };
 
 export default function RootLayout({
@@ -25,8 +29,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { try { const theme = localStorage.getItem('t7_theme'); if (theme === 'light') document.documentElement.classList.remove('dark'); } catch {} })()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

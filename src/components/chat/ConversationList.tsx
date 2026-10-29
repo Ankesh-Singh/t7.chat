@@ -1,179 +1,160 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
+import { useEffect, useRef, useState } from 'react'
+import { Check, KeyRound, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useConversations } from '@/hooks/useConversations'
+import type { StoredConversation } from '@/hooks/useChat'
 import type { ChatMessage } from '@/lib/sdk/types'
-import { MessageSquare, MoreHorizontal, Pencil, Trash2, Check, X } from 'lucide-react'
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
 interface Props {
   currentSessionId: string
   onResume: (id: string, messages: ChatMessage[]) => void
   onNew: () => void
-  onLoadingChange?: (loading: boolean) => void
+  onClose: () => void
+  onOpenSettings: () => void
 }
-
-export default function ConversationList({ currentSessionId, onResume, onNew, onLoadingChange }: Props) {
-  const { sessions, loading, resume, cancel } = useConversations()
-  const [customNames, setCustomNames] = useState<Record<string, string>>({})
+export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenSettings }: Props) {
+  const { sessions, resume, cancel, rename } = useConversations()
+  const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [toastMsg, setToastMsg] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<StoredConversation | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    try {
-      setCustomNames(JSON.parse(localStorage.getItem('llmtrace_chat_names') || '{}'))
-    } catch (e) {}
+    const onShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        searchRef.current?.focus()
+      }
+      if (event.key === 'Escape' && document.activeElement === searchRef.current) {
+        setQuery('')
+        searchRef.current?.blur()
+      }
+    }
+    window.addEventListener('keydown', onShortcut)
+    return () => window.removeEventListener('keydown', onShortcut)
   }, [])
 
-  useEffect(() => {
-    if (editingId && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [editingId])
+  const normalizedQuery = query.trim().toLowerCase()
+  const filtered = sessions.filter(session => {
+    if (!normalizedQuery) return true
+    const messageText = session.messages.map(message => message.content).join(' ')
+    return `${session.title} ${messageText}`.toLowerCase().includes(normalizedQuery)
+  })
 
-  const handleResume = async (id: string) => {
+  const openConversation = async (id: string) => {
     if (editingId) return
-    onLoadingChange?.(true)
-    const msgs = await resume(id)
-    onResume(id, msgs)
-    onLoadingChange?.(false)
-  }
-
-  const startRename = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setEditingId(id)
-    setEditValue(customNames[id] || `${id.slice(0, 8)}...`)
-  }
-
-  const submitRename = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (editValue.trim()) {
-      const updated = { ...customNames, [id]: editValue.trim() }
-      setCustomNames(updated)
-      localStorage.setItem('llmtrace_chat_names', JSON.stringify(updated))
-    }
-    setEditingId(null)
-  }
-
-  const cancelRename = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setEditingId(null)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
-    if (e.key === 'Enter') submitRename(id)
-    if (e.key === 'Escape') setEditingId(null)
-  }
-
-  const handleDeleteRequest = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setDeleteId(id)
-  }
-
-  const confirmDelete = () => {
-    if (deleteId) {
-      cancel(deleteId)
-      setDeleteId(null)
-      setToastMsg('Chat deleted successfully')
-      setTimeout(() => setToastMsg(null), 3000)
-    }
-  }
-
-  const formatDate = (d: string) => {
-    const date = new Date(d)
-    const today = new Date()
-    if (date.toDateString() === today.toDateString()) {
-      return `Today ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    }
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    onResume(id, await resume(id))
   }
 
   return (
-    <div className="w-[280px] flex flex-col bg-sidebar h-full relative">
-      <div className="px-5 pt-6 pb-4 flex items-center gap-2">
-        <span className="font-semibold text-[13px] text-sidebar-foreground tracking-tight uppercase text-muted-foreground/70">Recent</span>
+    <div className="flex h-full w-full flex-col">
+      <div className="flex h-12 items-center justify-between px-3">
+        <button onClick={onNew} className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <Image src="/applogo.png" alt="T7 Chat" width={28} height={28} className="h-7 w-7 rounded-lg object-cover" />
+          T7 Chat
+        </button>
+        <button onClick={onClose} className="icon-button md:hidden" aria-label="Close sidebar"><X /></button>
       </div>
 
-      <div className="px-4 pb-4">
-        <button
-          onClick={onNew}
-          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 text-sm font-medium transition-all shadow-sm"
-        >
-          New Chat
+      <div className="px-3 pb-2">
+        <button onClick={onNew} className="flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold shadow-xs transition-colors hover:bg-muted">
+          <Plus className="h-3.5 w-3.5" />
+          New chat
+          <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">Ctrl K</span>
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 space-y-0.5 pb-4">
-        {loading && (
-          <div className="space-y-1.5 pt-1">
-            {[1,2,3].map(i => (
-              <div key={i} className="h-12 w-full rounded-xl bg-sidebar-accent/50 animate-pulse" />
-            ))}
+      <div className="px-3 pb-2">
+        <label className="flex h-8 items-center gap-2 rounded-lg border border-transparent px-2.5 text-muted-foreground transition-colors focus-within:border-border focus-within:bg-muted/70">
+          <Search className="h-3.5 w-3.5" />
+          <input
+            ref={searchRef}
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search sessions"
+            aria-label="Search sessions"
+            className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {query && <button type="button" onClick={() => setQuery('')} className="text-muted-foreground hover:text-foreground" aria-label="Clear session search"><X className="h-3 w-3" /></button>}
+        </label>
+      </div>
+
+      <div className="flex items-center justify-between px-4 pb-2 pt-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">Recent sessions</span>
+        <span className="text-[10px] tabular-nums text-muted-foreground/50">{filtered.length}</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+        {filtered.length === 0 && (
+          <div className="mx-2 mt-8 flex flex-col items-center rounded-xl border border-dashed border-border px-4 py-8 text-center">
+            <MessageSquare className="mb-2 h-5 w-5 text-muted-foreground/50" />
+            <p className="text-xs font-medium">{query ? 'No matches' : 'No conversations yet'}</p>
+            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{query ? 'Try a different search.' : 'Your chats will appear here.'}</p>
           </div>
         )}
-        {!loading && sessions.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground/50">
-            <MessageSquare className="w-8 h-8 mb-2 opacity-50" />
-            <span className="text-xs font-medium">No threads yet</span>
-          </div>
-        )}
-        {sessions.map(session => (
+
+        {filtered.map(session => (
           <div
             key={session.id}
-            className={`group flex items-center justify-between rounded-xl px-3 py-3 text-sm cursor-pointer transition-colors duration-150 ${
-              session.id === currentSessionId
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+            className={`group mb-0.5 flex items-center rounded-lg px-2.5 py-2 transition-colors ${
+              session.id === currentSessionId ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/70'
             }`}
-            onClick={() => handleResume(session.id)}
           >
             {editingId === session.id ? (
-              <div className="flex items-center gap-2 w-full pr-1" onClick={e => e.stopPropagation()}>
+              <div className="flex min-w-0 flex-1 items-center gap-1">
                 <input
-                  ref={inputRef}
+                  autoFocus
                   value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
-                  onKeyDown={e => handleKeyDown(e, session.id)}
-                  className="flex-1 bg-background text-foreground text-[13px] px-2 py-1 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
+                  onChange={event => setEditValue(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' && editValue.trim()) {
+                      rename(session.id, editValue.trim())
+                      setEditingId(null)
+                    }
+                    if (event.key === 'Escape') setEditingId(null)
+                  }}
+                  className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-xs outline-none focus:border-foreground/30"
                 />
-                <button onClick={e => submitRename(session.id, e)} className="p-1 hover:bg-muted rounded text-green-500">
-                  <Check className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={cancelRename} className="p-1 hover:bg-muted rounded text-destructive">
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                <button
+                  onClick={() => {
+                    if (editValue.trim()) rename(session.id, editValue.trim())
+                    setEditingId(null)
+                  }}
+                  className="p-1 text-muted-foreground hover:text-foreground"
+                  aria-label="Save title"
+                ><Check className="h-3.5 w-3.5" /></button>
               </div>
             ) : (
               <>
-                <div className="flex-1 min-w-0 pr-2">
-                  <div className="truncate text-[14px] font-medium leading-tight mb-0.5">{customNames[session.id] || `${session.id.slice(0, 8)}...`}</div>
-                  <div className="text-[11px] opacity-60 font-medium">{formatDate(session.created_at)}</div>
-                </div>
-                
+                <button onClick={() => openConversation(session.id)} className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[13px] font-medium">{session.title}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    {new Date(session.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </p>
+                </button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="opacity-0 group-hover:opacity-100 text-sidebar-foreground/50 hover:text-sidebar-foreground p-1.5 rounded-lg hover:bg-sidebar-accent/80 transition-all shrink-0 data-[state=open]:opacity-100"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
+                  <DropdownMenuTrigger asChild>
+                    <button className="rounded-md p-1.5 text-muted-foreground opacity-0 hover:bg-background group-hover:opacity-100 data-[state=open]:opacity-100" aria-label="Conversation options">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                    <DropdownMenuItem onClick={(e) => startRename(session.id, e as any)}>
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Rename
+                  <DropdownMenuContent align="end" className="w-36 rounded-lg">
+                    <DropdownMenuItem onClick={() => {
+                      setEditValue(session.title)
+                      setEditingId(session.id)
+                    }}>
+                      <Pencil className="mr-2 h-3.5 w-3.5" /> Rename
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => handleDeleteRequest(session.id, e as any)} className="text-destructive focus:text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
+                    <DropdownMenuItem onClick={() => setPendingDelete(session)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -183,35 +164,32 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
         ))}
       </div>
 
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="w-[400px] max-w-[90%] bg-card border border-border rounded-3xl p-6 shadow-lg shadow-black/20 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-semibold mb-3">Delete chat?</h3>
-            <p className="text-[15px] text-muted-foreground mb-1">
-              This will delete <strong className="text-foreground">{customNames[deleteId] || 'this conversation'}</strong>.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-5 py-2.5 rounded-full font-semibold text-sm hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-5 py-2.5 rounded-full bg-destructive text-destructive-foreground font-semibold text-sm hover:bg-destructive/90 transition-colors"
-              >
-                Delete
-              </button>
+      <div className="border-t border-border/70 p-2.5">
+        <button onClick={onOpenSettings} className="mb-2 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground">
+          <KeyRound className="h-3.5 w-3.5" /> Connect provider keys
+        </button>
+        <div className="flex items-center gap-1 rounded-lg px-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-1 py-1.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">G</span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium">Guest workspace</p>
+              <p className="text-[10px] text-muted-foreground">Saved on this device</p>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 bg-card border border-border shadow-lg rounded-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <Check className="w-4 h-4 text-green-500" />
-          <span className="text-sm font-medium">{toastMsg}</span>
+      {pendingDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="delete-session-title" className="w-full max-w-sm rounded-2xl border border-border bg-popover p-5 shadow-2xl">
+            <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></div>
+            <h2 id="delete-session-title" className="text-sm font-semibold">Delete this session?</h2>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">“{pendingDelete.title}” will be removed from this device. This action cannot be undone.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setPendingDelete(null)} className="h-8 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted">Keep session</button>
+              <button type="button" onClick={() => { void cancel(pendingDelete.id); setPendingDelete(null) }} className="h-8 rounded-lg bg-destructive px-3 text-xs font-semibold text-destructive-foreground hover:opacity-90">Delete session</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

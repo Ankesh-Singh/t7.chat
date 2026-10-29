@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase/server'
 
 export async function GET() {
+  if (!supabaseServer) return NextResponse.json([])
   const { data, error } = await supabaseServer
     .from('sessions')
     .select('*')
@@ -14,6 +15,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const { id } = await req.json()
+  if (!supabaseServer) return NextResponse.json({ id })
   const { data, error } = await supabaseServer
     .from('sessions')
     .insert({ id })
@@ -26,6 +28,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const { id } = await req.json()
+  if (!supabaseServer) return NextResponse.json({ ok: true })
   const { error } = await supabaseServer
     .from('sessions')
     .update({ cancelled: true })

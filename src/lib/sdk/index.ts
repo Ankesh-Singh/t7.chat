@@ -5,14 +5,14 @@ import { redactPII } from '../pii'
 export class LLMClient {
   constructor(private provider: LLMProvider) {}
 
-  async *chat(messages: ChatMessage[], model: ModelId, sessionId: string) {
+  async *chat(messages: ChatMessage[], model: ModelId, sessionId: string, apiKey: string, signal?: AbortSignal) {
     const start = Date.now()
     let output = ''
     let status: InferenceLog['status'] = 'success'
     let error: string | undefined
 
     try {
-      for await (const token of this.provider.chat(messages, model)) {
+      for await (const token of this.provider.chat(messages, model, apiKey, signal)) {
         output += token
         yield token
       }

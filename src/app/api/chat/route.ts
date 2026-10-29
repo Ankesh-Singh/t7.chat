@@ -1,59 +1,70 @@
 import { NextRequest } from 'next/server'
 import { LLMClient } from '@/lib/sdk'
-import { groqProvider } from '@/lib/sdk/providers/groq'
-import type { ModelId } from '@/lib/sdk/types'
+import { byokProviders } from '@/lib/sdk/providers/byok'
+import { PROVIDERS } from '@/constants/models'
+import type { ChatMessage, Provider } from '@/lib/sdk/types'
 import { supabaseServer } from '@/lib/supabase/server'
 
-export async function POST(req: NextRequest) {
-  const { messages, model, sessionId } = await req.json()
+type ChatBody = {
+  messages?: ChatMessage[]
+  model?: string
+  provider?: Provider
+  apiKey?: string
+  sessionId?: string
+}
+function event(data: unknown) {
+  return `data: ${JSON.stringify(data)}\n\n`
+}
 
-  if (!messages || !model || !sessionId) {
-    return new Response('Missing required fields', { status: 400 })
+export async function POST(req: NextRequest) {
+  let body: ChatBody
+  try {
+    body = await req.json() as ChatBody
+  } catch {
+    return Response.json({ error: 'Invalid JSON body.' }, { status: 400 })
   }
 
-  // save user message
-  await supabaseServer.from('messages').insert({
-    session_id: sessionId,
-    role: 'user',
-    content: messages.at(-1)?.content,
-  })
+  const { messages, model, provider, apiKey, sessionId } = body
+  if (!Array.isArray(messages) || !model || !provider || !sessionId || !apiKey?.trim()) {
+    return Response.json({ error: 'Choose a model and add that provider API key first.' }, { status: 400 })
+  }
+  if (!PROVIDERS.some(item => item.id === provider) || !byokProviders[provider]) {
+    return Response.json({ error: 'Unsupported provider.' }, { status: 400 })
+  }
 
-  const client = new LLMClient(groqProvider)
+  if (supabaseServer) {
+    await supabaseServer.from('sessions').upsert({ id: sessionId, last_active: new Date().toISOString() })
+    await supabaseServer.from('messages').insert({ session_id: sessionId, role: 'user', content: messages.at(-1)?.content ?? '' })
+  }
+
+  const client = new LLMClient(byokProviders[provider])
   const encoder = new TextEncoder()
-
   const stream = new ReadableStream({
     async start(controller) {
       let fullOutput = ''
       try {
-        for await (const token of client.chat(messages, model as ModelId, sessionId)) {
+        for await (const token of client.chat(messages, model, sessionId, apiKey, req.signal)) {
           fullOutput += token
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: token })}\n\n`))
+          controller.enqueue(encoder.encode(event({ text: token })))
         }
-        // save assistant message
-        await supabaseServer.from('messages').insert({
-          session_id: sessionId,
-          role: 'assistant',
-          content: fullOutput,
-        })
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-      } catch (e: any) {
-        const errorMsg = e.message || 'Error generating response'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMsg })}\n\n`))
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        if (supabaseServer && fullOutput) {
+          await supabaseServer.from('messages').insert({ session_id: sessionId, role: 'assistant', content: fullOutput })
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Error generating response.'
+        controller.enqueue(encoder.encode(event({ error: message })))
       } finally {
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       }
     },
-
-    
   })
-  
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
     },
   })
 }

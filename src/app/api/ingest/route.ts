@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabase/server'
 import { redactPII } from '@/lib/pii'
 
 export async function POST(req: NextRequest) {
+  if (!supabaseServer) return NextResponse.json({ ok: true })
   try {
     const body = await req.json()
     const { session_id, provider, model, latency_ms, prompt_tokens, completion_tokens, status } = body

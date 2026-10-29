@@ -1,240 +1,173 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-import type { ChatMessage, ModelId } from '@/lib/sdk/types'
+import { useCallback, useRef, useState } from 'react'
+import { DEFAULT_MODEL, FALLBACK_MODELS } from '@/constants/models'
+import type { ChatMessage, ModelOption } from '@/lib/sdk/types'
+import type { Provider } from '@/lib/sdk/types'
 
+export const CONVERSATIONS_KEY = 't7_conversations'
+export const CONVERSATIONS_EVENT = 't7-conversations-changed'
+
+export type StoredConversation = {
+  id: string
+  title: string
+  updatedAt: string
+  messages: ChatMessage[]
+}
 function generateId() {
   return crypto.randomUUID()
 }
 
-export function useChat() {
+function getInitialSession() {
+  if (typeof window === 'undefined') return ''
+  const existing = localStorage.getItem('t7_session')
+  if (existing) return existing
+  const id = generateId()
+  localStorage.setItem('t7_session', id)
+  return id
+}
+
+function getInitialModel(): ModelOption {
+  if (typeof window === 'undefined') return DEFAULT_MODEL
+  const stored = localStorage.getItem('t7_model')
+  if (!stored) return DEFAULT_MODEL
+  const [provider, ...idParts] = stored.split(':')
+  const id = idParts.join(':')
+  return FALLBACK_MODELS.find(item => item.provider === provider && item.id === id) ?? DEFAULT_MODEL
+}
+
+function persistConversation(id: string, messages: ChatMessage[]) {
+  if (typeof window === 'undefined' || !id) return
+  let stored: StoredConversation[] = []
+  try {
+    stored = JSON.parse(localStorage.getItem(CONVERSATIONS_KEY) || '[]') as StoredConversation[]
+  } catch {
+    stored = []
+  }
+  const userTitle = messages.find(message => message.role === 'user')?.content.trim()
+  const conversation: StoredConversation = {
+    id,
+    title: userTitle ? userTitle.slice(0, 54) : 'New conversation',
+    updatedAt: new Date().toISOString(),
+    messages,
+  }
+  const next = [conversation, ...stored.filter(item => item.id !== id)].slice(0, 50)
+  localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
+  window.dispatchEvent(new Event(CONVERSATIONS_EVENT))
+}
+
+export function useChat(keys: Partial<Record<Provider, string>>) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
-  const [sessionId, setSessionId] = useState('')
-  const [model, setModel] = useState<ModelId>('llama-3.3-70b-versatile')
+  const [sessionId, setSessionId] = useState(getInitialSession)
+  const [model, setModelState] = useState<ModelOption>(getInitialModel)
   const abortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    let id = localStorage.getItem('llmtrace_session')
-    if (!id) {
-      id = generateId()
-      localStorage.setItem('llmtrace_session', id)
-      fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      }).catch(() => {})
-    }
-    setSessionId(id)
+  const setModel = useCallback((next: ModelOption) => {
+    setModelState(next)
+    localStorage.setItem('t7_model', `${next.provider}:${next.id}`)
   }, [])
 
   const newSession = useCallback(() => {
     const id = generateId()
-    localStorage.setItem('llmtrace_session', id)
+    localStorage.setItem('t7_session', id)
     setSessionId(id)
     setMessages([])
-    fetch('/api/sessions', {
+    void fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
-    }).catch(() => {})
+    })
   }, [])
 
-  const loadSession = useCallback((id: string, msgs: ChatMessage[]) => {
-    localStorage.setItem('llmtrace_session', id)
+  const loadSession = useCallback((id: string, nextMessages: ChatMessage[]) => {
+    localStorage.setItem('t7_session', id)
     setSessionId(id)
-    setMessages(msgs)
+    setMessages(nextMessages)
   }, [])
 
-  const sendMessage = useCallback(
-    async (content: string) => {
-      if (!content.trim() || isStreaming || !sessionId) return
+  const requestResponse = useCallback(async (requestMessages: ChatMessage[], activeModel: ModelOption) => {
+    if (!sessionId) return
+    const apiKey = keys[activeModel.provider]
+    if (!apiKey) {
+      const next = [...requestMessages, { role: 'assistant', content: `**Connect ${activeModel.provider} first.** Add your API key from the key button in the sidebar, then try again.` } as ChatMessage]
+      setMessages(next)
+      persistConversation(sessionId, next)
+      return
+    }
 
-      const userMsg: ChatMessage = { role: 'user', content }
-      const updated = [...messages, userMsg]
-      setMessages(updated)
-      setIsStreaming(true)
+    const controller = new AbortController()
+    abortRef.current = controller
+    setIsStreaming(true)
+    setMessages([...requestMessages, { role: 'assistant', content: '' }])
 
-      const controller = new AbortController()
-      abortRef.current = controller
-
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: updated, model, sessionId }),
-          signal: controller.signal,
-        })
-
-        if (!res.ok) {
-          throw new Error(`API Error: ${res.status}`)
-        }
-        if (!res.body) throw new Error('No response body')
-
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let assistantContent = ''
-
-        setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') break
-              try {
-                const parsed = JSON.parse(data)
-                if (parsed.error) {
-                  throw new Error(parsed.error)
-                }
-                assistantContent += parsed.text
-              } catch (e: any) {
-                if (e.message && e.message !== 'Unexpected end of JSON input' && !e.message.includes('JSON')) {
-                  throw e
-                }
-                // fallback for older streams if necessary
-                if (!data.includes('"error"')) {
-                  assistantContent += data
-                }
-              }
-              setMessages(prev => {
-                const copy = [...prev]
-                copy[copy.length - 1] = { role: 'assistant', content: assistantContent }
-                return copy
-              })
-            }
-          }
-        }
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') {
-          let errorMessage = 'Error: Failed to get response.'
-          
-          if (model === 'gemma2-9b-it' || model === 'mixtral-8x7b-32768') {
-            const mName = model === 'gemma2-9b-it' ? 'Gemma 2 9B' : 'Mixtral 8x7B'
-            errorMessage = `⚠️ **Model Discontinued:** The selected model (${mName}) has been discontinued by Groq. The app automatically recommends switching to **LLaMA 3.3 70B** for future messages. Please try again.`
-            setModel('llama-3.3-70b-versatile')
-          } else {
-            errorMessage = `⚠️ **Error:** ${(e as Error).message || 'Failed to get response.'}`
-          }
-
-          setMessages(prev => [
-            ...prev.slice(0, -1),
-            { role: 'assistant', content: errorMessage },
-          ])
-        }
-      } finally {
-        setIsStreaming(false)
-        abortRef.current = null
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: requestMessages, model: activeModel.id, provider: activeModel.provider, apiKey, sessionId }),
+        signal: controller.signal,
+      })
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null
+        throw new Error(body?.error || `Request failed (${response.status}).`)
       }
-    },
-    [messages, model, sessionId, isStreaming]
-  )
+      if (!response.body) throw new Error('The server returned an empty response.')
 
-  const regenerate = useCallback(
-    async (targetModel?: ModelId) => {
-      if (isStreaming || !sessionId || messages.length < 2) return
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let assistantContent = ''
 
-      const lastUserIndex = messages.map(m => m.role).lastIndexOf('user')
-      if (lastUserIndex === -1) return
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const events = buffer.split('\n\n')
+        buffer = events.pop() ?? ''
 
-      const updated = messages.slice(0, lastUserIndex + 1)
-      setMessages(updated)
-      setIsStreaming(true)
-
-      const activeModel = targetModel || model
-      if (targetModel && targetModel !== model) {
-        setModel(targetModel)
+        for (const entry of events) {
+          const data = entry.split('\n').find(line => line.startsWith('data: '))?.slice(6)
+          if (!data || data === '[DONE]') continue
+          const parsed = JSON.parse(data) as { text?: string; error?: string }
+          if (parsed.error) throw new Error(parsed.error)
+          if (parsed.text) assistantContent += parsed.text
+          const next = [...requestMessages, { role: 'assistant', content: assistantContent } as ChatMessage]
+          setMessages(next)
+          persistConversation(sessionId, next)
+        }
       }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
+      const message = error instanceof Error ? error.message : 'Failed to get a response.'
+      const next = [...requestMessages, { role: 'assistant', content: `**Could not send the message.** ${message}` } as ChatMessage]
+      setMessages(next)
+      persistConversation(sessionId, next)
+    } finally {
+      setIsStreaming(false)
+      abortRef.current = null
+    }
+  }, [keys, sessionId])
 
-      const controller = new AbortController()
-      abortRef.current = controller
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim() || isStreaming || !sessionId) return
+    const next = [...messages, { role: 'user', content: content.trim() } as ChatMessage]
+    setMessages(next)
+    persistConversation(sessionId, next)
+    await requestResponse(next, model)
+  }, [isStreaming, messages, model, requestResponse, sessionId])
 
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: updated, model: activeModel, sessionId }),
-          signal: controller.signal,
-        })
+  const regenerate = useCallback(async (targetModel?: ModelOption) => {
+    if (isStreaming || !sessionId) return
+    const lastUserIndex = messages.map(message => message.role).lastIndexOf('user')
+    if (lastUserIndex < 0) return
+    const next = messages.slice(0, lastUserIndex + 1)
+    const activeModel = targetModel ?? model
+    if (targetModel) setModel(targetModel)
+    await requestResponse(next, activeModel)
+  }, [isStreaming, messages, model, requestResponse, sessionId, setModel])
 
-        if (!res.ok) {
-          throw new Error(`API Error: ${res.status}`)
-        }
-        if (!res.body) throw new Error('No response body')
-
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let assistantContent = ''
-
-        setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') break
-              try {
-                const parsed = JSON.parse(data)
-                if (parsed.error) {
-                  throw new Error(parsed.error)
-                }
-                assistantContent += parsed.text
-              } catch (e: any) {
-                if (e.message && e.message !== 'Unexpected end of JSON input' && !e.message.includes('JSON')) {
-                  throw e
-                }
-                // fallback for older streams if necessary
-                if (!data.includes('"error"')) {
-                  assistantContent += data
-                }
-              }
-              setMessages(prev => {
-                const copy = [...prev]
-                copy[copy.length - 1] = { role: 'assistant', content: assistantContent }
-                return copy
-              })
-            }
-          }
-        }
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') {
-          let errorMessage = 'Error: Failed to get response.'
-          if (activeModel === 'gemma2-9b-it' || activeModel === 'mixtral-8x7b-32768') {
-            const mName = activeModel === 'gemma2-9b-it' ? 'Gemma 2 9B' : 'Mixtral 8x7B'
-            errorMessage = `⚠️ **Model Discontinued:** The selected model (${mName}) has been discontinued by Groq. The app automatically recommends switching to **LLaMA 3.3 70B** for future messages. Please try again.`
-            setModel('llama-3.3-70b-versatile')
-          } else {
-            errorMessage = `⚠️ **Error:** ${(e as Error).message || 'Failed to get response.'}`
-          }
-          setMessages(prev => [
-            ...prev.slice(0, -1),
-            { role: 'assistant', content: errorMessage },
-          ])
-        }
-      } finally {
-        setIsStreaming(false)
-        abortRef.current = null
-      }
-    },
-    [messages, model, sessionId, isStreaming]
-  )
-
-  const stopStreaming = useCallback(() => {
-    abortRef.current?.abort()
-    setIsStreaming(false)
-  }, [])
+  const stopStreaming = useCallback(() => abortRef.current?.abort(), [])
 
   return { messages, isStreaming, sessionId, model, setModel, sendMessage, regenerate, stopStreaming, newSession, loadSession }
 }

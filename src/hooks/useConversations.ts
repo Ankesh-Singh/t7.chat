@@ -1,52 +1,51 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
-import type { SessionRow, MessageRow } from '@/lib/supabase/types'
+import { useCallback, useEffect, useState } from 'react'
+import { CONVERSATIONS_EVENT, CONVERSATIONS_KEY, type StoredConversation } from './useChat'
 import type { ChatMessage } from '@/lib/sdk/types'
 
-export function useConversations() {
-  const [sessions, setSessions] = useState<SessionRow[]>([])
-  const [loading, setLoading] = useState(true)
+function readConversations(): StoredConversation[] {
+  if (typeof window === 'undefined') return []
+  try {
+    return JSON.parse(localStorage.getItem(CONVERSATIONS_KEY) || '[]') as StoredConversation[]
+  } catch {
+    return []
+  }
+}
 
-  const fetchSessions = useCallback(async () => {
-    try {
-      const res = await fetch('/api/sessions')
-      const data = await res.json()
-      if (Array.isArray(data)) setSessions(data)
-    } catch {
-      // silent
-    } finally {
-      setLoading(false)
+export function useConversations() {
+  const [sessions, setSessions] = useState<StoredConversation[]>(readConversations)
+
+  useEffect(() => {
+    const sync = () => setSessions(readConversations())
+    window.addEventListener(CONVERSATIONS_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(CONVERSATIONS_EVENT, sync)
+      window.removeEventListener('storage', sync)
     }
   }, [])
 
-  useEffect(() => {
-    fetchSessions()
-  }, [fetchSessions])
-
   const resume = useCallback(async (id: string): Promise<ChatMessage[]> => {
-    const sb = getSupabaseBrowser()
-    const { data } = await sb
-      .from('messages')
-      .select('role, content')
-      .eq('session_id', id)
-      .order('created_at', { ascending: true })
-
-    return (data as MessageRow[] | null)?.map(m => ({
-      role: m.role as ChatMessage['role'],
-      content: m.content,
-    })) ?? []
+    return readConversations().find(session => session.id === id)?.messages ?? []
   }, [])
 
   const cancel = useCallback(async (id: string) => {
-    await fetch('/api/sessions', {
+    const next = readConversations().filter(session => session.id !== id)
+    localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
+    setSessions(next)
+    void fetch('/api/sessions', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
-    setSessions(prev => prev.filter(s => s.id !== id))
   }, [])
 
-  return { sessions, loading, resume, cancel, refresh: fetchSessions }
+  const rename = useCallback((id: string, title: string) => {
+    const next = readConversations().map(session => session.id === id ? { ...session, title } : session)
+    localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
+    setSessions(next)
+  }, [])
+
+  return { sessions, loading: false, resume, cancel, rename }
 }

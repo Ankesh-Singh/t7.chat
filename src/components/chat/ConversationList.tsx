@@ -23,7 +23,7 @@ interface Props {
   user: User | null
 }
 export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenProfile, user }: Props) {
-  const { sessions, loading, resume, cancel, rename } = useConversations()
+  const { sessions, loading, resume, cancel, rename } = useConversations(user?.id)
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')

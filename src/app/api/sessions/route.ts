@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json([])
   const { data, error } = await supabaseServer
     .from('sessions')
-    .select('*')
+    .select('*, messages(*)')
     .eq('user_id', user.id)
     .eq('cancelled', false)
     .order('last_active', { ascending: false })

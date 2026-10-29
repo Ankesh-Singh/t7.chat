@@ -14,39 +14,60 @@ function readConversations(): StoredConversation[] {
   }
 }
 
-export function useConversations() {
+export function useConversations(userId?: string) {
   const [sessions, setSessions] = useState<StoredConversation[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const sync = () => setSessions(readConversations())
-    const timer = window.setTimeout(() => {
-      sync()
-      setLoading(false)
-    }, 0)
+    let active = true
+    const sync = () => { if (!userId) setSessions(readConversations()) }
+    const load = async () => {
+      if (!userId) {
+        sync()
+        setLoading(false)
+        return
+      }
+      try {
+        const headers = await getAuthHeaders()
+        const response = await fetch('/api/sessions', { headers })
+        if (!response.ok) throw new Error('Could not load sessions')
+        const rows = await response.json() as Array<{ id: string; last_active: string; messages?: ChatMessage[] }>
+        if (!active) return
+        setSessions(rows.map(row => {
+          const messages = row.messages ?? []
+          const firstUser = messages.find(message => message.role === 'user')?.content.trim()
+          return { id: row.id, title: firstUser?.slice(0, 54) || 'New conversation', updatedAt: row.last_active, messages }
+        }))
+      } catch {
+        if (active) sync()
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    void load()
     window.addEventListener(CONVERSATIONS_EVENT, sync)
     window.addEventListener('storage', sync)
     return () => {
-      window.clearTimeout(timer)
+      active = false
       window.removeEventListener(CONVERSATIONS_EVENT, sync)
       window.removeEventListener('storage', sync)
     }
-  }, [])
+  }, [userId])
 
   const resume = useCallback(async (id: string): Promise<ChatMessage[]> => {
-    return readConversations().find(session => session.id === id)?.messages ?? []
-  }, [])
+    return sessions.find(session => session.id === id)?.messages ?? readConversations().find(session => session.id === id)?.messages ?? []
+  }, [sessions])
 
   const cancel = useCallback(async (id: string) => {
-    const next = readConversations().filter(session => session.id !== id)
-    localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
+    const next = sessions.filter(session => session.id !== id)
+    if (!userId) localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
     setSessions(next)
     void getAuthHeaders().then(authHeaders => fetch('/api/sessions', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ id }),
     }))
-  }, [])
+  }, [sessions, userId])
 
   const rename = useCallback((id: string, title: string) => {
     const next = readConversations().map(session => session.id === id ? { ...session, title } : session)

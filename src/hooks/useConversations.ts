@@ -14,13 +14,19 @@ function readConversations(): StoredConversation[] {
 }
 
 export function useConversations() {
-  const [sessions, setSessions] = useState<StoredConversation[]>(readConversations)
+  const [sessions, setSessions] = useState<StoredConversation[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const sync = () => setSessions(readConversations())
+    const timer = window.setTimeout(() => {
+      sync()
+      setLoading(false)
+    }, 0)
     window.addEventListener(CONVERSATIONS_EVENT, sync)
     window.addEventListener('storage', sync)
     return () => {
+      window.clearTimeout(timer)
       window.removeEventListener(CONVERSATIONS_EVENT, sync)
       window.removeEventListener('storage', sync)
     }
@@ -47,5 +53,5 @@ export function useConversations() {
     setSessions(next)
   }, [])
 
-  return { sessions, loading: false, resume, cancel, rename }
+  return { sessions, loading, resume, cancel, rename }
 }

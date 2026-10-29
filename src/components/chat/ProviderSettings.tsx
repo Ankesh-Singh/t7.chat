@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check, ExternalLink, KeyRound, ShieldCheck, Trash2, X } from 'lucide-react'
 import { PROVIDERS, providerConfig } from '@/constants/models'
 import type { Provider } from '@/lib/sdk/types'
+import { useToast } from '@/components/ui/toast'
 
 interface Props {
   keys: Partial<Record<Provider, string>>
@@ -15,6 +16,7 @@ interface Props {
 export default function ProviderSettings({ keys, onSave, onClear, onClose }: Props) {
   const [active, setActive] = useState<Provider>('openai')
   const [draft, setDraft] = useState(keys.openai || '')
+  const { toast } = useToast()
   const config = providerConfig(active)
 
   const selectProvider = (provider: Provider) => {
@@ -24,6 +26,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
 
   const save = () => {
     onSave(active, draft)
+    toast(`${config?.label} key connected for this browser session.`, 'success')
   }
 
   return (
@@ -93,7 +96,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
                   Get a key <ExternalLink className="h-3 w-3" />
                 </a>
                 {keys[active] && (
-                  <button onClick={() => { onClear(active); setDraft('') }} className="inline-flex items-center gap-1 text-xs font-medium text-destructive hover:underline">
+                    <button onClick={() => { onClear(active); setDraft(''); toast(`${config?.label} key removed from this browser session.`, 'info') }} className="inline-flex items-center gap-1 text-xs font-medium text-destructive hover:underline">
                     <Trash2 className="h-3 w-3" /> Remove
                   </button>
                 )}

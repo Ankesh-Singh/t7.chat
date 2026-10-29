@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { ArrowUp, Check, ChevronDown, Filter, Loader2, Search, Settings2, Square, Sparkles } from 'lucide-react'
 import type { ModelOption, Provider } from '@/lib/sdk/types'
 import { FALLBACK_MODELS, PROVIDERS } from '@/constants/models'
+import { useToast } from '@/components/ui/toast'
 
 const PROVIDER_LOGOS: Partial<Record<Provider, string>> = {
   openai: '/provider/openai.svg',
@@ -31,6 +32,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   const [providerTab, setProviderTab] = useState<Provider>(model.provider)
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS)
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null)
+  const { toast } = useToast()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const activeModel = model
 
@@ -52,6 +54,8 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
       if (Array.isArray(liveModels) && liveModels.length) {
         setModels(previous => [...previous.filter(item => item.provider !== provider), ...liveModels])
       }
+    } catch {
+      toast(`Could not load the live ${PROVIDERS.find(item => item.id === provider)?.label} catalog. Check your key or try again.`, 'error')
     } finally {
       setLoadingProvider(null)
     }

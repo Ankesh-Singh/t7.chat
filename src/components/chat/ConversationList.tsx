@@ -21,7 +21,7 @@ interface Props {
   onOpenSettings: () => void
 }
 export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenSettings }: Props) {
-  const { sessions, resume, cancel, rename } = useConversations()
+  const { sessions, loading, resume, cancel, rename } = useConversations()
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -93,7 +93,13 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
         <span className="text-[10px] tabular-nums text-muted-foreground/50">{filtered.length}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-        {filtered.length === 0 && (
+        {loading && (
+          <div className="space-y-1 px-1" aria-label="Loading sessions">
+            {[1, 2, 3, 4].map(item => <div key={item} className="h-12 animate-pulse rounded-lg bg-muted/60" />)}
+          </div>
+        )}
+
+        {!loading && filtered.length === 0 && (
           <div className="mx-2 mt-8 flex flex-col items-center rounded-xl border border-dashed border-border px-4 py-8 text-center">
             <MessageSquare className="mb-2 h-5 w-5 text-muted-foreground/50" />
             <p className="text-xs font-medium">{query ? 'No matches' : 'No conversations yet'}</p>

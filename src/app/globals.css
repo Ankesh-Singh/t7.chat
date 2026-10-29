@@ -173,7 +173,7 @@ button:disabled {
 }
 
 .composer {
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   border-radius: 1rem;
   background: color-mix(in srgb, var(--card) 76%, transparent);

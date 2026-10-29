@@ -57,6 +57,9 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
     onResume(id, await resume(id))
   }
 
+  const displayName = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Guest workspace') as string
+  const initials = displayName.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
+
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex h-12 items-center justify-between px-3">
@@ -175,10 +178,13 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
       <div className="border-t border-border/70 p-2.5">
         <button onClick={onOpenProfile} className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-sidebar-accent">
           <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">{(user?.email?.[0] || 'G').toUpperCase()}</span>
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-foreground text-[10px] font-semibold text-background">
+              {initials}
+              {user && <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full border border-sidebar bg-emerald-500" />}
+            </span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-medium">{user?.email || 'Guest workspace'}</p>
-              <p className="text-[10px] text-muted-foreground">{user ? 'Authenticated workspace' : 'Saved on this device'}</p>
+              <p className="truncate text-xs font-medium">{displayName}</p>
+              <p className="truncate text-[10px] text-muted-foreground">{user ? user.email : 'Saved on this device'}</p>
             </div>
           </div>
           <span className="rounded-md px-1.5 py-1 text-[10px] text-muted-foreground">{user ? 'Profile' : 'Sign in'}</span>

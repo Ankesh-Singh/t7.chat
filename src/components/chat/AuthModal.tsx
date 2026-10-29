@@ -30,7 +30,7 @@ export default function AuthModal({ onClose }: Props) {
       } else {
         const sessionReady = await signUp(email.trim(), password)
         toast(sessionReady ? 'Account created and signed in.' : 'Account created. Check your email to confirm it.', 'success')
-        if (sessionReady) onClose()
+        onClose()
       }
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Authentication failed.'

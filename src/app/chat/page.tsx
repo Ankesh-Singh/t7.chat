@@ -20,6 +20,13 @@ export default function ChatPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const sendMessage = (content: string) => {
+    if (auth.configured && !auth.user && !providerKeys.keys[chat.model.provider]) {
+      setIsAuthOpen(true)
+      return
+    }
+    chat.sendMessage(content)
+  }
 
   return (
     <main className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
@@ -80,17 +87,19 @@ export default function ChatPage() {
           messages={chat.messages}
           isStreaming={chat.isStreaming}
           model={chat.model}
-          onSuggestion={chat.sendMessage}
+          onSuggestion={sendMessage}
           onRetry={chat.regenerate}
         />
         <ChatInput
-          onSend={chat.sendMessage}
+          onSend={sendMessage}
           onStop={chat.stopStreaming}
           isStreaming={chat.isStreaming}
           model={chat.model}
           setModel={chat.setModel}
           keys={providerKeys.keys}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          requireAuthentication={auth.configured && !auth.user}
+          onRequireAuth={() => setIsAuthOpen(true)}
         />
       </section>
       {isSettingsOpen && (

@@ -5,7 +5,8 @@ A fast, production-oriented, multi-provider chat workspace with a Notion-style i
 ## What changed
 
 - BYOK architecture: users add their own provider key in the app.
-- Keys live in browser `sessionStorage`; they are sent only with the active request and never stored in server environment variables.
+- Guest keys live in browser `sessionStorage`; authenticated users can sync keys to Supabase in encrypted form using `AUTH_ENCRYPTION_KEY`.
+- Email/password authentication is provided by Supabase Auth (JWT sessions). Google auth is intentionally not enabled.
 - The model picker uses the reference interaction: provider rail, searchable live catalog, connected-key indicators, and model metadata.
 - Each provider catalog is fetched from that provider's official `/models` endpoint.
 - Streaming chat supports stop, retry, Markdown, tables, links, and copyable code blocks.
@@ -15,6 +16,10 @@ A fast, production-oriented, multi-provider chat workspace with a Notion-style i
 - The supplied `/public/applogo.png` asset is used for the favicon, dashboard, sidebar, and empty-state branding.
 - Optional Supabase sync and inference analytics.
 - Cloudflare Workers deployment through OpenNext.
+
+## Authentication and encrypted keys
+
+Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `AUTH_ENCRYPTION_KEY` in the deployment environment, then apply `supabase/migrations/001_auth_provider_keys.sql`. The browser receives a Supabase JWT after email/password sign-in. Provider keys are encrypted with AES-GCM on the server before insertion into `provider_keys`; the encryption secret is never exposed to the browser. Without these values, the app remains in local guest mode.
 
 ## Providers
 

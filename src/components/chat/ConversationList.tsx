@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, KeyRound, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useConversations } from '@/hooks/useConversations'
 import type { StoredConversation } from '@/hooks/useChat'
+import type { User } from '@supabase/supabase-js'
 import type { ChatMessage } from '@/lib/sdk/types'
 import {
   DropdownMenu,
@@ -19,8 +20,10 @@ interface Props {
   onNew: () => void
   onClose: () => void
   onOpenSettings: () => void
+  onOpenProfile: () => void
+  user: User | null
 }
-export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenSettings }: Props) {
+export default function ConversationList({ currentSessionId, onResume, onNew, onClose, onOpenSettings, onOpenProfile, user }: Props) {
   const { sessions, loading, resume, cancel, rename } = useConversations()
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -174,15 +177,16 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
         <button onClick={onOpenSettings} className="mb-2 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground">
           <KeyRound className="h-3.5 w-3.5" /> Connect provider keys
         </button>
-        <div className="flex items-center gap-1 rounded-lg px-1">
-          <div className="flex min-w-0 flex-1 items-center gap-2 px-1 py-1.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">G</span>
+        <button onClick={onOpenProfile} className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-sidebar-accent">
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">{(user?.email?.[0] || 'G').toUpperCase()}</span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-medium">Guest workspace</p>
-              <p className="text-[10px] text-muted-foreground">Saved on this device</p>
+              <p className="truncate text-xs font-medium">{user?.email || 'Guest workspace'}</p>
+              <p className="text-[10px] text-muted-foreground">{user ? 'Authenticated workspace' : 'Saved on this device'}</p>
             </div>
           </div>
-        </div>
+          <span className="rounded-md px-1.5 py-1 text-[10px] text-muted-foreground">{user ? 'Profile' : 'Sign in'}</span>
+        </button>
       </div>
 
       {pendingDelete && (

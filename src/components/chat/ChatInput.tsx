@@ -104,7 +104,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                 className={`relative flex h-10 w-10 items-center justify-center rounded-xl text-[10px] font-semibold transition-colors ${providerTab === provider.id ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >
                 {PROVIDER_LOGOS[provider.id] ? (
-                  <Image src={PROVIDER_LOGOS[provider.id] as string} alt="" width={19} height={19} className="h-5 w-5 object-contain opacity-85" />
+                  <Image src={PROVIDER_LOGOS[provider.id] as string} alt="" width={19} height={19} className="provider-logo h-5 w-5 object-contain" />
                 ) : provider.shortLabel}
                 {keys[provider.id] && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />}
               </button>
@@ -164,7 +164,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                 >
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-card text-[9px] font-semibold text-muted-foreground">
                     {PROVIDER_LOGOS[item.provider] ? (
-                      <Image src={PROVIDER_LOGOS[item.provider] as string} alt="" width={14} height={14} className="h-3.5 w-3.5 object-contain" />
+                      <Image src={PROVIDER_LOGOS[item.provider] as string} alt="" width={14} height={14} className="provider-logo h-3.5 w-3.5 object-contain" />
                     ) : item.provider === 'openai' ? '✦' : PROVIDERS.find(provider => provider.id === item.provider)?.shortLabel}
                   </span>
                   <span className="min-w-0 flex-1">

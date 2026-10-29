@@ -1,19 +1,27 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { Check, ExternalLink, KeyRound, ShieldCheck, Trash2, X } from 'lucide-react'
 import { PROVIDERS, providerConfig } from '@/constants/models'
 import type { Provider } from '@/lib/sdk/types'
+import type { User } from '@supabase/supabase-js'
 import { useToast } from '@/components/ui/toast'
+
+const providerLogos: Partial<Record<Provider, string>> = {
+  openai: '/provider/openai.svg', anthropic: '/provider/anthropic.svg', google: '/provider/gemini.svg',
+  groq: '/provider/groq.svg', mistral: '/provider/mistral.svg', xai: '/provider/grok.svg',
+}
 
 interface Props {
   keys: Partial<Record<Provider, string>>
-  onSave: (provider: Provider, key: string) => void
-  onClear: (provider: Provider) => void
+  onSave: (provider: Provider, key: string) => void | Promise<void>
+  onClear: (provider: Provider) => void | Promise<void>
   onClose: () => void
+  user?: User | null
 }
 
-export default function ProviderSettings({ keys, onSave, onClear, onClose }: Props) {
+export default function ProviderSettings({ keys, onSave, onClear, onClose, user }: Props) {
   const [active, setActive] = useState<Provider>('openai')
   const [draft, setDraft] = useState(keys.openai || '')
   const { toast } = useToast()
@@ -24,9 +32,13 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
     setDraft(keys[provider] || '')
   }
 
-  const save = () => {
-    onSave(active, draft)
-    toast(`${config?.label} key connected for this browser session.`, 'success')
+  const save = async () => {
+    try {
+      await onSave(active, draft)
+      toast(`${config?.label} key ${user ? 'encrypted and synced to your account' : 'connected for this browser session'}.`, 'success')
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Unable to save provider key.', 'error')
+    }
   }
 
   return (
@@ -40,7 +52,9 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
               onClick={() => selectProvider(provider.id)}
               className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${active === provider.id ? 'bg-sidebar-accent text-foreground' : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground'}`}
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-card text-[9px]">{provider.shortLabel}</span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-card text-[9px]">
+                {providerLogos[provider.id] ? <Image src={providerLogos[provider.id] as string} alt="" width={16} height={16} className="provider-logo h-4 w-4 object-contain" /> : provider.shortLabel}
+              </span>
               <span className="min-w-0 flex-1 truncate">{provider.label}</span>
               {keys[provider.id] && <Check className="h-3.5 w-3.5 text-emerald-600" />}
             </button>
@@ -54,7 +68,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
                 <KeyRound className="h-4 w-4 text-muted-foreground" />
                 <h2 className="text-sm font-semibold">Connect your AI providers</h2>
               </div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">Keys are stored in this browser session and sent only to the selected provider request.</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">{user ? 'Keys are encrypted before they are stored and scoped to your account.' : 'Keys stay in this browser session and are sent only to the selected provider request.'}</p>
             </div>
             <button onClick={onClose} className="icon-button" aria-label="Close settings"><X /></button>
           </header>
@@ -87,7 +101,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
 
             <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 p-3 text-xs leading-5 text-muted-foreground">
               <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
-              <span>BYOK only: T7 never ships a provider key and does not persist yours on the server.</span>
+              <span>BYOK only: {user ? 'T7 encrypts your key before storing it and never exposes it to other users.' : 'T7 never ships a provider key or persists yours on the server.'}</span>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -96,7 +110,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose }: Pro
                   Get a key <ExternalLink className="h-3 w-3" />
                 </a>
                 {keys[active] && (
-                    <button onClick={() => { onClear(active); setDraft(''); toast(`${config?.label} key removed from this browser session.`, 'info') }} className="inline-flex items-center gap-1 text-xs font-medium text-destructive hover:underline">
+                    <button onClick={async () => { try { await onClear(active); setDraft(''); toast(`${config?.label} key removed from this browser session.`, 'info') } catch (cause) { toast(cause instanceof Error ? cause.message : 'Unable to remove provider key.', 'error') } }} className="inline-flex items-center gap-1 text-xs font-medium text-destructive hover:underline">
                     <Trash2 className="h-3 w-3" /> Remove
                   </button>
                 )}

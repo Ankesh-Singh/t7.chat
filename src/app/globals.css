@@ -176,9 +176,22 @@ button:disabled {
   overflow: hidden;
   border: 1px solid var(--input);
   border-radius: 1rem;
-  background: var(--card);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 30px rgb(0 0 0 / 0.055);
+  background: color-mix(in srgb, var(--card) 76%, transparent);
+  backdrop-filter: blur(24px) saturate(125%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 14px 42px rgb(0 0 0 / 0.1);
   transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.model-popover {
+  background: color-mix(in srgb, var(--popover) 88%, transparent);
+  backdrop-filter: blur(28px) saturate(125%);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.3);
+}
+
+.provider-logo {
+  border-radius: 0.35rem;
+  background: #fff;
+  padding: 2px;
 }
 
 .composer:focus-within {

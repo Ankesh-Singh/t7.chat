@@ -10,11 +10,15 @@ import ChatWindow from '@/components/chat/ChatWindow'
 import ChatInput from '@/components/chat/ChatInput'
 import ProviderSettings from '@/components/chat/ProviderSettings'
 import ThemeToggle from '@/components/chat/ThemeToggle'
+import AuthModal from '@/components/chat/AuthModal'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function ChatPage() {
-  const providerKeys = useProviderKeys()
+  const auth = useAuth()
+  const providerKeys = useProviderKeys(auth.user?.id)
   const chat = useChat(providerKeys.keys)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   return (
@@ -39,6 +43,8 @@ export default function ChatPage() {
               }}
               onClose={() => setIsSidebarOpen(false)}
               onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenProfile={() => setIsAuthOpen(true)}
+              user={auth.user}
             />
           </aside>
         </>
@@ -93,8 +99,10 @@ export default function ChatPage() {
           onSave={providerKeys.updateKey}
           onClear={providerKeys.clearKey}
           onClose={() => setIsSettingsOpen(false)}
+          user={auth.user}
         />
       )}
+      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
     </main>
   )
 }

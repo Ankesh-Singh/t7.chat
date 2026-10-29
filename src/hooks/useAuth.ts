@@ -13,18 +13,22 @@ export function useAuth() {
   useEffect(() => {
     if (!client) return
     let active = true
-    void client.auth.getUser().then(({ data }) => {
+    const refresh = () => client.auth.getSession().then(({ data }) => {
       if (active) {
-        setUser(data.user ?? null)
+        setUser(data.session?.user ?? null)
         setLoading(false)
       }
     })
+    void refresh()
+    const onAuthRefresh = () => { void refresh() }
+    window.addEventListener('t7-auth-refresh', onAuthRefresh)
     const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
     return () => {
       active = false
+      window.removeEventListener('t7-auth-refresh', onAuthRefresh)
       listener.subscription.unsubscribe()
     }
   }, [client])

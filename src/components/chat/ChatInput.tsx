@@ -137,7 +137,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                   <Settings2 className="h-3 w-3" /> API keys
                 </button>
               </div>
-              <div className="mt-3 flex items-center gap-2 rounded-lg border border-input bg-background px-2.5">
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/45 px-2.5">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   autoFocus

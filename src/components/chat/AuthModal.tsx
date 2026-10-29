@@ -25,10 +25,12 @@ export default function AuthModal({ onClose }: Props) {
     try {
       if (mode === 'sign-in') {
         await signIn(email.trim(), password)
+        window.dispatchEvent(new Event('t7-auth-refresh'))
         toast('Signed in successfully.', 'success')
         onClose()
       } else {
         const sessionReady = await signUp(email.trim(), password)
+        window.dispatchEvent(new Event('t7-auth-refresh'))
         toast(sessionReady ? 'Account created and signed in.' : 'Account created. Check your email to confirm it.', 'success')
         onClose()
       }

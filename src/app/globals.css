@@ -237,10 +237,11 @@ button:disabled {
 
 .effort-menu {
   position: absolute;
-  bottom: calc(100% + 0.45rem);
+  top: calc(100% + 0.35rem);
   left: 50%;
   z-index: 60;
   min-width: 6.25rem;
+  height: auto;
   transform: translateX(-50%);
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);

@@ -39,6 +39,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null)
   const { toast } = useToast()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const pickerRootRef = useRef<HTMLDivElement>(null)
   const activeModel = model
   const connectedProvider = PROVIDERS.find(provider => Boolean(keys[provider.id]))?.id
 
@@ -67,10 +68,24 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
     }
   }
 
-  const openPicker = () => {
-    setOpen(value => !value)
-    if (!open) void refreshProvider(model.provider)
+  const showPicker = () => {
+    if (isStreaming || open) return
+    setOpen(true)
+    void refreshProvider(connectedProvider ?? model.provider)
   }
+
+  const togglePicker = () => {
+    setOpen(value => !value)
+    if (!open) void refreshProvider(connectedProvider ?? model.provider)
+  }
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (open && pickerRootRef.current && !pickerRootRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [open])
 
   const selectProvider = (provider: Provider) => {
     setProviderTab(provider)
@@ -103,7 +118,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   }
 
   return (
-    <div className="relative shrink-0 bg-gradient-to-t from-background via-background to-transparent px-3 pb-3 pt-2 md:px-6 md:pb-5">
+    <div ref={pickerRootRef} className="relative shrink-0 bg-gradient-to-t from-background via-background to-transparent px-3 pb-3 pt-2 md:px-6 md:pb-5">
       {open && (
         <div className="model-popover absolute bottom-[calc(100%-0.25rem)] left-1/2 right-auto z-50 flex h-[min(500px,calc(100dvh-7rem))] w-[calc(100vw-1.5rem)] max-w-2xl -translate-x-1/2 overflow-hidden rounded-2xl border-0 bg-popover shadow-2xl">
           <aside className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-sidebar/70 py-2 sm:w-14">
@@ -219,7 +234,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
 
           <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
             <div className="flex min-w-0 items-center gap-1">
-              <button disabled={isStreaming} onClick={openPicker} className="model-trigger" aria-expanded={open}>
+              <button disabled={isStreaming} onClick={togglePicker} onMouseEnter={showPicker} className="model-trigger" aria-expanded={open}>
                 {PROVIDER_LOGOS[activeModel.provider] ? (
                   <Image src={PROVIDER_LOGOS[activeModel.provider] as string} alt="" width={16} height={16} className="provider-logo h-4 w-4 shrink-0 object-contain" />
                 ) : <Sparkles className="h-3.5 w-3.5" />}

@@ -175,8 +175,8 @@ export default function ConversationList({ currentSessionId, onResume, onNew, on
         ))}
       </div>
 
-      <div className="border-t border-border/70 p-2.5">
-        <button onClick={onOpenProfile} className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-sidebar-accent">
+      <div className="border-t border-border/70 p-2">
+        <button onClick={onOpenProfile} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left transition-colors hover:bg-sidebar-accent/60">
           <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
             <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-foreground text-[10px] font-semibold text-background">
               {initials}

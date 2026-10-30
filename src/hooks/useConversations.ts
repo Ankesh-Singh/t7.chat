@@ -14,6 +14,22 @@ function readConversations(): StoredConversation[] {
   }
 }
 
+async function syncLocalSessions(localSessions: StoredConversation[], remoteSessions: StoredConversation[]) {
+  const remoteById = new Map(remoteSessions.map(session => [session.id, session]))
+  const pending = localSessions.filter(session => {
+    const remote = remoteById.get(session.id)
+    return !remote || (remote.messages.length === 0 && session.messages.length > 0)
+  })
+  if (!pending.length) return
+  const headers = await getAuthHeaders()
+  await Promise.all(pending.map(session => fetch('/api/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify({ id: session.id, messages: session.messages }),
+    cache: 'no-store',
+  })))
+}
+
 export function useConversations(userId?: string) {
   const [sessions, setSessions] = useState<StoredConversation[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,10 +56,20 @@ export function useConversations(userId?: string) {
           const firstUser = messages.find(message => message.role === 'user')?.content.trim()
           return { id: row.id, title: firstUser?.slice(0, 54) || 'New conversation', updatedAt: row.last_active, messages }
         })
-        // Keep a just-created local thread visible if the server has not
-        // persisted it yet. A successful non-empty server response remains
-        // authoritative for an account with existing remote sessions.
-        setSessions(remoteSessions.length > 0 ? remoteSessions : readConversations())
+        const localSessions = readConversations()
+        const localById = new Map(localSessions.map(session => [session.id, session]))
+        const merged = remoteSessions.map(remote => {
+          const local = localById.get(remote.id)
+          if (!local) return remote
+          return local.messages.length > remote.messages.length
+            ? { ...remote, title: local.title, updatedAt: local.updatedAt, messages: local.messages }
+            : remote
+        })
+        const remoteIds = new Set(remoteSessions.map(session => session.id))
+        merged.push(...localSessions.filter(session => !remoteIds.has(session.id)))
+        merged.sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+        setSessions(merged)
+        void syncLocalSessions(localSessions, remoteSessions)
       } catch {
         if (active && requestId === requestSerial) setSessions(readConversations())
       } finally {

@@ -6,10 +6,10 @@ import { useRealtimeMetrics } from '@/hooks/useRealtimeMetrics'
 import LatencyChart from '@/components/dashboard/LatencyChart'
 import ThroughputChart from '@/components/dashboard/ThroughputChart'
 import Link from 'next/link'
-import { BarChart2, ArrowLeft, ChevronDown } from 'lucide-react'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
 import ThemeToggle from '@/components/chat/ThemeToggle'
 import { useAuth } from '@/hooks/useAuth'
-import { PROVIDERS } from '@/constants/models'
+import { FALLBACK_MODELS, PROVIDERS } from '@/constants/models'
 
 export default function DashboardPage() {
   const auth = useAuth()
@@ -29,7 +29,11 @@ export default function DashboardPage() {
 
   const logs = filteredByTime.filter(l => Boolean(l.model && l.model.trim() !== ''))
   const providerLogs = providerFilter === 'all' ? logs : logs.filter(l => l.provider === providerFilter)
-  const uniqueModels = [...new Set(providerLogs.filter(l => l.model).map(l => l.model))]
+  const catalogModels = FALLBACK_MODELS
+    .filter(model => providerFilter === 'all' || model.provider === providerFilter)
+    .map(model => model.id)
+  const uniqueModels = [...new Set([...catalogModels, ...providerLogs.filter(l => l.model).map(l => l.model)])]
+  const modelLabels = new Map(FALLBACK_MODELS.map(model => [model.id, model.label]))
   const activeModelFilter = modelFilter !== 'all' && uniqueModels.includes(modelFilter) ? modelFilter : 'all'
   const filtered = activeModelFilter === 'all' ? providerLogs : providerLogs.filter(l => l.model === activeModelFilter)
 
@@ -67,7 +71,7 @@ export default function DashboardPage() {
           <ThemeToggle />
           <FilterGroup label="Time range"><FilterMenu value={timeRange} onChange={setTimeRange} options={[['1h', 'Last 1 hour'], ['6h', 'Last 6 hours'], ['24h', 'Last 24 hours'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']]} /></FilterGroup>
           <FilterGroup label="Provider"><FilterMenu value={providerFilter} onChange={setProviderFilter} options={[['all', 'All providers'], ...PROVIDERS.map(provider => [provider.id, provider.label] as [string, string])]} /></FilterGroup>
-          <FilterGroup label="Model"><FilterMenu value={activeModelFilter} onChange={setModelFilter} options={[['all', 'All models'], ...uniqueModels.map(model => [model, model] as [string, string])]} /></FilterGroup>
+          <FilterGroup label="Model"><FilterMenu value={activeModelFilter} onChange={setModelFilter} options={[['all', 'All models'], ...uniqueModels.map(model => [model, modelLabels.get(model) ?? model] as [string, string])]} /></FilterGroup>
         </div>
       </header>
 
@@ -80,17 +84,6 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {[1,2].map(i => <div key={i} className="h-[280px] rounded-xl bg-card border border-border animate-pulse" />)}
             </div>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] max-w-6xl mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mb-5">
-              <BarChart2 className="w-7 h-7 text-muted-foreground/50" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">No inference logs yet</h2>
-            <p className="text-sm text-muted-foreground/60 mb-6">Send a message to start collecting data</p>
-            <Link href="/chat" className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-              Go to Chat
-            </Link>
           </div>
         ) : (
           <div className="mx-auto max-w-6xl space-y-4 sm:space-y-5">
@@ -172,6 +165,11 @@ export default function DashboardPage() {
                         </tr>
                       )
                     })}
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-12 text-center text-xs text-muted-foreground">No requests in this window.</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

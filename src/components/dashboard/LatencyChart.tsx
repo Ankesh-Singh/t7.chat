@@ -45,14 +45,6 @@ export default function LatencyChart({ logs }: Props) {
     return { data: points.length === 1 ? [points[0], { ...points[0] }] : points, chartConfig: config }
   }, [logs])
 
-  if (logs.length === 0) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-center h-[280px]">
-        <p className="text-xs text-muted-foreground">No data yet</p>
-      </div>
-    )
-  }
-
   const models = Object.keys(chartConfig)
 
   return (
@@ -60,6 +52,11 @@ export default function LatencyChart({ logs }: Props) {
       <h3 className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-3">Latency over time</h3>
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
         <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 0 }}>
+          <defs>
+            <filter id="latency-line-shadow" x="-20%" y="-20%" width="140%" height="160%">
+              <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="var(--foreground)" floodOpacity="0.28" />
+            </filter>
+          </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="time"
@@ -86,6 +83,8 @@ export default function LatencyChart({ logs }: Props) {
                 type="monotone"
                 stroke={`var(--color-${safeKey})`}
                 strokeWidth={2}
+                strokeLinecap="round"
+                filter="url(#latency-line-shadow)"
                 dot={{ r: 3, fill: `var(--color-${safeKey})`, strokeWidth: 0, fillOpacity: 1 }}
                 activeDot={{ r: 5, strokeWidth: 0 }}
                 connectNulls

@@ -56,6 +56,10 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider, apiKey: keys[provider] }),
       })
+      if (!response.ok) {
+        toast(`Could not load ${PROVIDERS.find(item => item.id === provider)?.label} models. Check your API key and try again.`, 'error')
+        return
+      }
       const data = await response.json() as { models?: ModelOption[] }
       const liveModels = data.models
       if (Array.isArray(liveModels) && liveModels.length) {

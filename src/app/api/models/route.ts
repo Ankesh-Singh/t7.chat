@@ -34,8 +34,7 @@ export async function POST(req: NextRequest) {
       cache: 'no-store',
     })
     if (!response.ok) {
-      const detail = await response.text()
-      return NextResponse.json({ error: `Could not load ${config.label} models (${response.status}). ${detail.slice(0, 180)}` }, { status: response.status })
+      return NextResponse.json({ error: `Could not verify the ${config.label} API key.` }, { status: response.status })
     }
     const payload = await response.json() as Record<string, unknown>
     const raw = (payload.data ?? payload.models ?? []) as Record<string, unknown>[]

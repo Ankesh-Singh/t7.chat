@@ -50,8 +50,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
         body: JSON.stringify({ provider: active, apiKey: validation.value }),
       })
       if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null
-        throw new Error(body?.error || `The ${config?.label} key could not be verified.`)
+        throw new Error(`${config?.label} key could not be verified. Check the key and try again.`)
       }
       await onSave(active, validation.value)
       toast(`${config?.label} key ${user ? 'encrypted and synced to your account' : 'connected for this browser session'}.`, 'success')

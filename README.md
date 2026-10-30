@@ -31,7 +31,7 @@ Provider API keys are entered in the app. Do not add provider keys to `.env.loca
 ## Supabase setup
 
 1. Create a Supabase project and enable Email/Password under Authentication.
-2. Apply [`supabase/migrations/001_auth_provider_keys.sql`](supabase/migrations/001_auth_provider_keys.sql) and [`supabase/migrations/002_application_schema.sql`](supabase/migrations/002_application_schema.sql) in order, using the Supabase SQL editor or `DATABASE_URL` from a trusted migration machine.
+2. Apply [`supabase/migrations/001_auth_provider_keys.sql`](supabase/migrations/001_auth_provider_keys.sql), [`supabase/migrations/002_application_schema.sql`](supabase/migrations/002_application_schema.sql), and [`supabase/migrations/003_provider_keys_write_policies.sql`](supabase/migrations/003_provider_keys_write_policies.sql) in order, using the Supabase SQL editor or `DATABASE_URL` from a trusted migration machine.
 3. Add the four auth variables above to `.env.local`.
 4. Add the same values to Cloudflare Worker secrets before deployment.
 
@@ -44,6 +44,7 @@ To apply migrations with `psql`:
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/001_auth_provider_keys.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/002_application_schema.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/003_provider_keys_write_policies.sql
 ```
 
 In PowerShell, set `$env:DATABASE_URL` for the current session before running the same commands. Do not add `DATABASE_URL` to Cloudflare runtime variables unless a separate migration job needs it.

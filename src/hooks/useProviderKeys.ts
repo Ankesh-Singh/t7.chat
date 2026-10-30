@@ -45,7 +45,7 @@ export function useProviderKeys(userId?: string) {
   }, [userId])
 
   const updateKey = useCallback(async (provider: Provider, key: string) => {
-    const next = { ...readKeys(), ...(key.trim() ? { [provider]: key.trim() } : {}) }
+    const next = { ...keys, ...(key.trim() ? { [provider]: key.trim() } : {}) }
     if (!key.trim()) delete next[provider]
     if (userId && key.trim()) {
       const client = getSupabaseBrowser()
@@ -60,7 +60,7 @@ export function useProviderKeys(userId?: string) {
     }
     if (!userId) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setKeys(next)
-  }, [userId])
+  }, [keys, userId])
 
   const clearKey = useCallback(async (provider: Provider) => {
     if (userId) {

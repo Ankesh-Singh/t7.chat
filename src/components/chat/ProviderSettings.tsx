@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Eye, EyeOff, ExternalLink, KeyRound, ShieldCheck, Trash2, X } from 'lucide-react'
 import { PROVIDERS, providerConfig } from '@/constants/models'
 import type { Provider } from '@/lib/sdk/types'
@@ -29,6 +29,14 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
   const [validating, setValidating] = useState(false)
   const { toast } = useToast()
   const config = providerConfig(active)
+
+  useEffect(() => {
+    // Sync encrypted keys loaded after the modal mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraft(keys[active] || '')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowKey(false)
+  }, [active, keys])
 
   const selectProvider = (provider: Provider) => {
     setActive(provider)
@@ -103,8 +111,11 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
             </div>
 
             <div>
-              <p className="text-base font-semibold">{config?.label} API key</p>
-              <p className="mt-1 text-sm text-muted-foreground">{config?.description}. Add your own key to unlock the live model catalog.</p>
+              <div className="flex items-center gap-2">
+                <p className="text-base font-semibold">{config?.label} API key</p>
+                {keys[active] && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">Connected</span>}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{config?.description}. {keys[active] ? 'Replace the saved key below if needed.' : 'Add your own key to unlock the live model catalog.'}</p>
             </div>
 
             <label className="block">
@@ -113,7 +124,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
                 type={showKey ? 'text' : 'password'}
                 value={draft}
                 onChange={event => setDraft(event.target.value)}
-                placeholder={`Paste your ${config?.label} key`}
+                placeholder={keys[active] ? 'Saved key — enter a replacement to update it' : `Paste your ${config?.label} key`}
                 className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-foreground/35 focus:ring-2 focus:ring-ring/20"
                 autoComplete="off"
               />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS } from '@/constants/models'
 import type { ChatMessage, ModelOption, ReasoningEffort } from '@/lib/sdk/types'
 import type { Provider } from '@/lib/sdk/types'
@@ -61,12 +61,25 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [sessionId, setSessionId] = useState(getInitialSession)
-  const [model, setModelState] = useState<ModelOption>(getInitialModel)
+  const [model, setModelState] = useState<ModelOption>(DEFAULT_MODEL)
   const [reasoningEffort, setReasoningEffortState] = useState<ReasoningEffort>(() => {
     if (typeof window === 'undefined') return 'medium'
     return (localStorage.getItem('t7_reasoning_effort') as ReasoningEffort | null) ?? 'medium'
   })
   const abortRef = useRef<AbortController | null>(null)
+
+  // Read browser-persisted model preferences after hydration to keep SSR markup deterministic.
+  useEffect(() => {
+    const stored = localStorage.getItem('t7_model')
+    if (!stored) return
+    const [provider, ...idParts] = stored.split(':')
+    const saved = FALLBACK_MODELS.find(item => item.provider === provider && item.id === idParts.join(':'))
+    if (saved) {
+      // Hydrate browser preference after SSR; this intentionally updates state once after mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setModelState(saved)
+    }
+  }, [])
 
   const setModel = useCallback((next: ModelOption) => {
     setModelState(next)

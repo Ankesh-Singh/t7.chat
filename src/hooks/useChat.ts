@@ -28,15 +28,6 @@ function getInitialSession() {
   return id
 }
 
-function getInitialModel(): ModelOption {
-  if (typeof window === 'undefined') return DEFAULT_MODEL
-  const stored = localStorage.getItem('t7_model')
-  if (!stored) return DEFAULT_MODEL
-  const [provider, ...idParts] = stored.split(':')
-  const id = idParts.join(':')
-  return FALLBACK_MODELS.find(item => item.provider === provider && item.id === id) ?? DEFAULT_MODEL
-}
-
 function persistConversation(id: string, messages: ChatMessage[]) {
   if (typeof window === 'undefined' || !id) return
   let stored: StoredConversation[] = []
@@ -62,10 +53,7 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [sessionId, setSessionId] = useState(getInitialSession)
   const [model, setModelState] = useState<ModelOption>(DEFAULT_MODEL)
-  const [reasoningEffort, setReasoningEffortState] = useState<ReasoningEffort>(() => {
-    if (typeof window === 'undefined') return 'medium'
-    return (localStorage.getItem('t7_reasoning_effort') as ReasoningEffort | null) ?? 'medium'
-  })
+  const [reasoningEffort, setReasoningEffortState] = useState<ReasoningEffort>('medium')
   const abortRef = useRef<AbortController | null>(null)
 
   // Read browser-persisted model preferences after hydration to keep SSR markup deterministic.
@@ -78,6 +66,15 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
       // Hydrate browser preference after SSR; this intentionally updates state once after mount.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setModelState(saved)
+    }
+  }, [])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('t7_reasoning_effort') as ReasoningEffort | null
+    if (saved === 'low' || saved === 'medium' || saved === 'high') {
+      // Hydrate browser preference after SSR; this intentionally updates state once after mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReasoningEffortState(saved)
     }
   }, [])
 

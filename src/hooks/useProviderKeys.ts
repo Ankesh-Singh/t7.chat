@@ -56,7 +56,10 @@ export function useProviderKeys(userId?: string) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` },
         body: JSON.stringify({ provider, key }),
       })
-      if (!response.ok) throw new Error((await response.json() as { error?: string }).error || 'Unable to save provider key.')
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null
+        throw new Error(body?.error || `Unable to save provider key (${response.status}).`)
+      }
     }
     if (!userId) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setKeys(next)

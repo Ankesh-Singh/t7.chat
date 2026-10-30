@@ -34,8 +34,13 @@ export async function PUT(request: NextRequest) {
   if (!validation.valid) return NextResponse.json({ error: validation.message }, { status: 400 })
   try {
     const encrypted = await encryptProviderKey(validation.value)
-    const { error } = await supabaseServer.from('provider_keys').upsert({ user_id: user.id, provider: body.provider, encrypted_key: encrypted.ciphertext, iv: encrypted.iv, updated_at: new Date().toISOString() }, { onConflict: 'user_id,provider' })
-    if (error) throw error
+    const record = { user_id: user.id, provider: body.provider, encrypted_key: encrypted.ciphertext, iv: encrypted.iv, updated_at: new Date().toISOString() }
+    const existing = await supabaseServer.from('provider_keys').select('id').eq('user_id', user.id).eq('provider', body.provider).maybeSingle()
+    if (existing.error) throw existing.error
+    const result = existing.data
+      ? await supabaseServer.from('provider_keys').update(record).eq('id', existing.data.id)
+      : await supabaseServer.from('provider_keys').insert(record)
+    if (result.error) throw result.error
     return NextResponse.json({ ok: true })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to save provider key.' }, { status: 500 })

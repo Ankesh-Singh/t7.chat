@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.floor(requestedLimit), 1), 200) : 100
   const { data, error } = await supabaseServer
     .from('inference_logs')
-    .select('id, session_id, user_id, provider, model, latency_ms, prompt_tokens, completion_tokens, status, input_preview, output_preview, error, created_at')
+    .select('id, session_id, user_id, provider, model, latency_ms, prompt_tokens, completion_tokens, status, input_preview, output_preview, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(limit)

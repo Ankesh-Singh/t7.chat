@@ -6,7 +6,7 @@ import { getAuthenticatedUser } from '@/lib/auth/server'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  if (!supabaseServer) return NextResponse.json({ ok: true })
+  if (!supabaseServer) return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
   try {
     const body = await req.json()
     const user = await getAuthenticatedUser(req)
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       prompt_tokens,
       completion_tokens,
       status,
-      error: typeof logErrorInput === 'string' ? redactPII(logErrorInput).slice(0, 500) : null,
       input_preview: redactPII(body.input_preview ?? ''),
       output_preview: redactPII(body.output_preview ?? ''),
     }
@@ -34,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       await supabaseServer.from('failed_logs').insert({
-        payload,
+        payload: { ...payload, error: typeof logErrorInput === 'string' ? redactPII(logErrorInput).slice(0, 500) : null },
         error: error.message,
       })
     }

@@ -21,7 +21,10 @@ export function useAuth() {
     })
     void refresh()
     const onAuthRefresh = () => { void refresh() }
+    const onWindowFocus = () => { void refresh() }
     window.addEventListener('t7-auth-refresh', onAuthRefresh)
+    window.addEventListener('focus', onWindowFocus)
+    document.addEventListener('visibilitychange', onWindowFocus)
     const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
@@ -29,6 +32,8 @@ export function useAuth() {
     return () => {
       active = false
       window.removeEventListener('t7-auth-refresh', onAuthRefresh)
+      window.removeEventListener('focus', onWindowFocus)
+      document.removeEventListener('visibilitychange', onWindowFocus)
       listener.subscription.unsubscribe()
     }
   }, [client])

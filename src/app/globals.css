@@ -241,7 +241,7 @@ button:disabled {
 
 .effort-menu {
   position: absolute;
-  top: calc(100% + 0.35rem);
+  bottom: calc(100% + 0.35rem);
   left: 50%;
   z-index: 60;
   min-width: 6.25rem;

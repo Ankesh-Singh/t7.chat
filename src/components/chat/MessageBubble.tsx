@@ -60,7 +60,7 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
               code: ({ className, children }) => {
                 const language = /language-(\w+)/.exec(className || '')?.[1]
                 const code = String(children).replace(/\n$/, '')
-                if (!language) return <code className={className} {...props}>{children}</code>
+                if (!language) return <code className={className}>{children}</code>
                 return (
                   <span className="code-block">
                     <span className="code-header">

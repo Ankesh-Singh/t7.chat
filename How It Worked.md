@@ -1,71 +1,78 @@
 # How It Worked
 
-This document explains the main production decisions behind T7 Chat. The goal was to keep the chat interface fast while keeping identity, persistence, provider requests, and analytics under server control.
+T7 Chat keeps the browser fast and puts identity, persistence, provider calls, and telemetry behind server routes.
 
 ## Architecture
 
 ```mermaid
-flowchart TB
-  Auth["Supabase Auth"] --> Browser["Browser session"]
-  Browser --> Chat["Chat API"]
-  Chat --> Provider["Provider stream"]
-  Chat --> Sessions[("Sessions + messages")]
-  Provider --> Telemetry["SDK telemetry"]
-  Telemetry --> Ingest["Ingest API"]
-  Ingest --> Logs[("Inference logs")]
-  Browser --> Metrics["Metrics API"]
-  Metrics --> Logs
-  Logs --> Dashboard["Dashboard"]
-  Logs -. "realtime + 10-second refresh" .-> Dashboard
+flowchart LR
+  A["User signs in"] --> B["Browser JWT"]
+  B --> C["Chat API"]
+  C --> D["Provider stream"]
+  C --> E[("Sessions + messages")]
+  D --> F["Telemetry"]
+  F --> G[("Inference logs")]
+  B --> H["Metrics API"]
+  H --> G
+  G --> I["Dashboard"]
+  G -. "realtime + refresh" .-> I
 ```
 
-## Request lifecycle
+## Request flow
 
-1. A user signs in with Supabase Auth. The browser keeps the current access token and forwards it with authenticated requests.
-2. The chat client sends the selected model, provider, session ID, messages, and provider key to `POST /api/chat`.
-3. The server validates the request and provider key, resolves the user from the JWT, then creates or updates the user-owned session.
-4. The selected provider streams tokens back over SSE. The browser renders each token as it arrives, while the completed user and assistant messages are persisted.
-5. The SDK records latency, estimated token counts, status, and redacted previews. It forwards that record to `POST /api/ingest` with the same authorization context.
-6. The dashboard loads the user’s logs through `GET /api/metrics`. Supabase realtime adds new rows quickly, and a short refresh catches events that were missed.
+1. Supabase Auth signs the user in. The browser keeps the JWT and sends it with authenticated requests.
+2. `POST /api/chat` validates the model, provider, key, and session ID.
+3. The server saves the user message, calls the provider, and streams the response over SSE.
+4. The completed assistant message is saved to the same session.
+5. The SDK sends latency, token estimates, status, and redacted previews to `POST /api/ingest`.
+6. The dashboard reads the user’s records through `GET /api/metrics`.
 
-## Persistence and security
+## Data and security
 
-Sessions and messages are owned by `user_id`. Server routes resolve the user before reading or writing account data, and database policies restrict direct reads to that same user. The service-role key is used only on the server; it is never sent to the browser.
+- Sessions, messages, and logs belong to a `user_id`.
+- Server routes resolve the user from the JWT before reading or writing data.
+- Database policies protect direct reads and writes for the authenticated user.
+- The service-role key stays on the server. It is never exposed to the browser.
+- Authenticated provider keys are encrypted and account-scoped. Guest keys stay in the browser session.
 
-Provider keys follow two paths. Authenticated keys are encrypted before they are stored and are scoped to the account. Guest keys remain in the browser session. Provider keys are never committed to the repository or placed in public environment variables.
+## Sidebar behavior
 
-The sidebar keeps a local copy for immediate UI updates, but authenticated users are refreshed from the server. Refreshes are debounced and ordered so the many browser updates produced during streaming cannot let an older response overwrite a newer session list.
+The sidebar keeps a local copy so a new conversation appears immediately. Authenticated sessions are then refreshed from the server.
 
-## Telemetry and dashboard behavior
+Refreshes are debounced and ordered. This matters during streaming because every token can trigger a local update; an older request must not overwrite a newer session list.
 
-Inference logs are intentionally small. They contain operational fields such as provider, model, latency, token estimates, status, and short redacted previews. The dashboard reads only the current user’s records and displays the latest requests, model values, latency, token totals, and error rate.
+If the server has not persisted a new session yet, the local copy remains visible instead of being replaced by an empty response.
 
-The metrics and session endpoints use `Cache-Control: private, no-store`, and browser fetches also disable caching. This avoids showing an old dashboard after a new inference. Realtime is used for responsiveness, not as the only source of truth; the refresh fallback makes the view recover when a realtime event is delayed or dropped.
+## Metrics behavior
 
-Database writes that cannot be stored are recorded in `failed_logs` so ingestion problems can be investigated without exposing them to the user interface.
+Inference logs contain only operational data: provider, model, latency, token estimates, status, and short redacted previews.
+
+The metrics and session APIs use `no-store`, so the dashboard does not reuse stale responses. Realtime inserts make new data appear quickly, while a short refresh repairs the view if a realtime event is missed.
+
+Failed ingestion writes are recorded in `failed_logs` for investigation.
 
 ## Design questions
 
-### Why make the server the trust boundary?
+### Why keep the server as the trust boundary?
 
-The browser needs to feel immediate, but it should not decide which account owns a session or analytics row. Keeping those checks in the server routes makes the ownership rule consistent for chat, sessions, provider keys, and metrics.
+The browser should feel immediate, but it should not decide which account owns a session or a metric. The server applies the same ownership rule to chat, sessions, keys, and analytics.
 
 ### How would I scale this?
 
-The first step would be to move telemetry ingestion to a queue so provider responses do not depend on a database write completing immediately. Dashboard queries should become paginated or time-windowed instead of reading a fixed recent batch. Realtime subscriptions should remain filtered by user, and older logs can be archived separately.
+Move telemetry to a queue, paginate or time-limit dashboard queries, keep realtime subscriptions user-scoped, and archive older logs.
 
 ### What could improve?
 
-Provider token usage should replace the current estimates wherever an API returns usage data. Telemetry delivery should have durable retries and an idempotency key. The next test layer should run authenticated chat, session persistence, ingestion, and dashboard reads against a disposable Supabase project.
+Use provider-reported token usage instead of estimates, add durable telemetry retries with idempotency, and run authenticated end-to-end tests against a disposable Supabase project.
 
 ### Why use both realtime and refresh?
 
-Realtime gives the dashboard a responsive feel, but it is not a durable delivery guarantee. A short no-store refresh is simple, cheap at this scale, and repairs the view without introducing a second state store.
+Realtime is responsive but not a delivery guarantee. A short no-store refresh is a simple fallback that keeps the dashboard correct.
 
 ## Production checklist
 
-- Apply the SQL migrations in filename order, including the observability hardening migration.
-- Keep the service-role and encryption secrets server-side.
-- Configure Supabase Email/Password authentication and enable realtime for `inference_logs` if live inserts are required.
-- Monitor `failed_logs` and provider error rates before increasing traffic.
-- Replace the fixed recent-log window with pagination before the dataset becomes large.
+- Apply the SQL migrations in filename order.
+- Use a real Supabase `service_role` key on the server; never use the anon key in that variable.
+- Keep encryption and database secrets out of source control.
+- Enable Supabase realtime for `inference_logs` if live dashboard inserts are needed.
+- Monitor `failed_logs` and provider error rates before scaling traffic.

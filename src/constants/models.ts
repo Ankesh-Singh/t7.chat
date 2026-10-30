@@ -33,12 +33,22 @@ export const FALLBACK_MODELS: ModelOption[] = [
   { id: 'gpt-6-luna', label: 'GPT-6 Luna', provider: 'openai', description: 'Fast, focused, cost-sensitive work' },
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', provider: 'anthropic', description: 'Fast Claude model for everyday work' },
   { id: 'claude-opus-5', label: 'Claude Opus 5', provider: 'anthropic', description: 'Anthropic model for demanding agentic work' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic', description: 'Fast, efficient Claude for high-volume work' },
   { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', provider: 'google', description: 'Fast multimodal reasoning' },
   { id: 'gemini-3.8-pro', label: 'Gemini 3.8 Pro', provider: 'google', description: 'Advanced reasoning and long context' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', provider: 'google', description: 'Cost-efficient, high-throughput responses' },
+  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', provider: 'google', description: 'Low-cost model for everyday tasks' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', provider: 'google', description: 'Budget-friendly multimodal model' },
   { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', provider: 'groq', description: 'Large open-weight reasoning model' },
   { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', provider: 'groq', description: 'Fast open-weight reasoning' },
+  { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant', provider: 'groq', description: 'Very fast, cost-efficient open model' },
   { id: 'mistral-large-latest', label: 'Mistral Large', provider: 'mistral', description: 'General-purpose Mistral model' },
+  { id: 'mistral-small-latest', label: 'Mistral Small', provider: 'mistral', description: 'Efficient model for everyday tasks' },
+  { id: 'ministral-8b-latest', label: 'Ministral 8B', provider: 'mistral', description: 'Small, fast, cost-efficient model' },
   { id: 'grok-4', label: 'Grok 4', provider: 'xai', description: 'xAI reasoning and coding model' },
+  { id: 'grok-3-mini', label: 'Grok 3 Mini', provider: 'xai', description: 'Fast and economical reasoning model' },
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', provider: 'openrouter', description: 'Low-cost Gemini through OpenRouter' },
+  { id: 'meta-llama/llama-3.1-8b-instruct', label: 'Llama 3.1 8B', provider: 'openrouter', description: 'Efficient open model through OpenRouter' },
 ]
 
 export function providerConfig(provider: Provider) {

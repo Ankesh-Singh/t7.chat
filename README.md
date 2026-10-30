@@ -1,36 +1,20 @@
 # T7 Chat
 
-A fast, production-oriented, multi-provider chat workspace with a Notion-style interface.
+> 📌 Read [How It Worked](How%20It%20Worked.md) for the architecture, request flow, key decisions, scaling notes, and improvement ideas.
 
-## What changed
+A multi-provider AI chat workspace with bring-your-own-key support, Supabase authentication, streaming responses, and inference telemetry.
 
-- BYOK architecture: users add their own provider key in the app.
-- Keys live in browser `sessionStorage`; they are sent only with the active request and never stored in server environment variables.
-- The model picker uses the reference interaction: provider rail, searchable live catalog, connected-key indicators, and model metadata.
-- Each provider catalog is fetched from that provider's official `/models` endpoint.
-- Streaming chat supports stop, retry, Markdown, tables, links, and copyable code blocks.
-- Local conversation history includes search, rename, and delete.
-- Notion-style dark mode is the default; light mode is available from the compact top bar toggle and persists per browser.
-- Session search supports title and message-content matches, `Ctrl/Cmd + K` focus, and a second confirmation before deletion.
-- The supplied `/public/applogo.png` asset is used for the favicon, dashboard, sidebar, and empty-state branding.
-- Optional Supabase sync and inference analytics.
-- Cloudflare Workers deployment through OpenNext.
+## What changed?
 
-## Providers
+- Added authenticated Supabase sessions, messages, provider keys, and inference logs.
+- Added provider support for OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI, and OpenRouter.
+- Added live model discovery after connecting a provider key.
+- Added a dashboard for latency, requests by model, tokens, and recent inference logs.
+- Added Cloudflare Workers deployment through OpenNext.
 
-| Provider | Official API | Key page |
-|---|---|---|
-| OpenAI | `https://api.openai.com/v1` | https://platform.openai.com/api-keys |
-| Anthropic | `https://api.anthropic.com/v1` | https://console.anthropic.com/settings/keys |
-| Google Gemini | `https://generativelanguage.googleapis.com/v1beta` | https://aistudio.google.com/apikey |
-| Groq | `https://api.groq.com/openai/v1` | https://console.groq.com/keys |
-| Mistral | `https://api.mistral.ai/v1` | https://console.mistral.ai/api-keys |
-| xAI | `https://api.x.ai/v1` | https://console.x.ai |
-| OpenRouter | `https://openrouter.ai/api/v1` | https://openrouter.ai/settings/keys |
+## Run locally
 
-OpenAI, Groq, Mistral, xAI, and OpenRouter use their OpenAI-compatible chat endpoints. Anthropic uses Messages streaming. Gemini uses `streamGenerateContent`. The provider catalog is refreshed with the user's key, so newly released or account-specific models appear without a redeploy.
-
-## Local setup
+Requirements: Node.js 20+, pnpm, and a Supabase project with Email/Password authentication enabled.
 
 ```bash
 pnpm install
@@ -38,23 +22,39 @@ copy .env.example .env.local
 pnpm dev
 ```
 
-Open `/chat`, select the model button in the composer, open **API keys**, and add a key for the provider you want to use. Without Supabase, chats remain local to the browser and the dashboard is empty.
+Open [http://localhost:3000/chat](http://localhost:3000/chat).
 
-## Cloudflare
+Add these values to `.env.local`:
 
-```bash
-npx wrangler login
-pnpm cf:build
-pnpm cf:preview
-pnpm cf:deploy
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+AUTH_ENCRYPTION_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-No provider secret is required in Cloudflare. If you enable Supabase, configure its public URL/anon key and service-role key through Cloudflare environment variables/secrets. Set `NEXT_PUBLIC_APP_URL` only if you want inference logs posted back to the deployed app.
+Apply the SQL files in `supabase/migrations/` in filename order. Provider keys are added through the app and should not be committed to the repository.
 
-The runtime uses Web-standard `fetch`, `ReadableStream`, and `AbortSignal` APIs, so provider requests work on Cloudflare Workers.
+## Checks
 
-## Documentation images
+```bash
+pnpm lint
+pnpm test
+pnpm build
+```
 
-![Architecture diagram](image.png)
+## Cloudflare deployment
 
-![Chat interface](image-1.png)
+For a manual Cloudflare Workers deployment, use:
+
+```bash
+pnpm cf:build
+npx wrangler deploy
+```
+
+Add the Supabase URL, Supabase anon key, service-role key, encryption key, and production app URL as Worker variables/secrets.
+
+## License
+
+MIT License · Built by [Ankesh Singh](https://github.com/Ankesh-Singh)

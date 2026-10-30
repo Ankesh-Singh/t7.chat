@@ -20,9 +20,10 @@ interface Props {
   onClear: (provider: Provider) => void | Promise<void>
   onClose: () => void
   user?: User | null
+  keysLoading?: boolean
 }
 
-export default function ProviderSettings({ keys, onSave, onClear, onClose, user }: Props) {
+export default function ProviderSettings({ keys, onSave, onClear, onClose, user, keysLoading = false }: Props) {
   const [active, setActive] = useState<Provider>('openai')
   const [draft, setDraft] = useState(keys.openai || '')
   const [showKey, setShowKey] = useState(false)
@@ -112,7 +113,7 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
             <div>
               <div className="flex items-center gap-2">
                 <p className="text-base font-semibold">{config?.label} API key</p>
-                {keys[active] && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">Connected</span>}
+                {keysLoading ? <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Loading saved key…</span> : keys[active] && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">Connected</span>}
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{config?.description}. {keys[active] ? 'Replace the saved key below if needed.' : 'Add your own key to unlock the live model catalog.'}</p>
             </div>
@@ -123,7 +124,8 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
                 type={showKey ? 'text' : 'password'}
                 value={draft}
                 onChange={event => setDraft(event.target.value)}
-                placeholder={keys[active] ? 'Saved key — enter a replacement to update it' : `Paste your ${config?.label} key`}
+                placeholder={keysLoading ? 'Loading saved key…' : keys[active] ? 'Saved key loaded — enter a replacement to update it' : `Paste your ${config?.label} key`}
+                disabled={keysLoading}
                 className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-foreground/35 focus:ring-2 focus:ring-ring/20"
                 autoComplete="off"
               />
@@ -142,13 +144,13 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
                 <a href={config?.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
                   Get a key <ExternalLink className="h-3 w-3" />
                 </a>
-                {keys[active] && (
+                {!keysLoading && keys[active] && (
                     <button onClick={async () => { try { await onClear(active); setDraft(''); toast(`${config?.label} key removed from this browser session.`, 'info') } catch (cause) { toast(cause instanceof Error ? cause.message : 'Unable to remove provider key.', 'error') } }} className="inline-flex items-center gap-1 text-xs font-medium text-destructive hover:underline">
                     <Trash2 className="h-3 w-3" /> Remove
                   </button>
                 )}
               </div>
-              <button onClick={save} disabled={!draft.trim() || validating} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-xs font-semibold text-background transition-opacity disabled:opacity-40">
+              <button onClick={save} disabled={keysLoading || !draft.trim() || validating} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-xs font-semibold text-background transition-opacity disabled:opacity-40">
                 {validating ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-background/30 border-t-background" /> : <Check className="h-3.5 w-3.5" />} {validating ? 'Checking…' : 'Save key'}
               </button>
             </div>

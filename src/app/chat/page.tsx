@@ -113,6 +113,7 @@ export default function ChatPage() {
           onClear={providerKeys.clearKey}
           onClose={() => setIsSettingsOpen(false)}
           user={auth.user}
+          keysLoading={providerKeys.loading}
         />
       )}
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}

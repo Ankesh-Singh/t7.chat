@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let fullOutput = ''
       try {
-        for await (const token of client.chat(messages, model, sessionId, apiKey, { signal: req.signal, reasoningEffort, authToken: req.headers.get('authorization') ?? undefined })) {
+        for await (const token of client.chat(messages, model, sessionId, apiKey, { signal: req.signal, reasoningEffort, authToken: req.headers.get('authorization') ?? undefined, logUrl: `${req.nextUrl.origin}/api/ingest` })) {
           fullOutput += token
           controller.enqueue(encoder.encode(event({ text: token })))
         }

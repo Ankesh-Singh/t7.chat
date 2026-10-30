@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, RefreshCw, Sparkles } from 'lucide-react'
 import type { ChatMessage, ModelOption } from '@/lib/sdk/types'
 
@@ -55,6 +57,7 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
             remarkPlugins={[remarkGfm]}
             components={{
               a: ({ children, ...props }) => <a {...props} target="_blank" rel="noreferrer">{children}</a>,
+              pre: ({ children }) => <>{children}</>,
               code: ({ className, children, ...props }) => {
                 const language = /language-(\w+)/.exec(className || '')?.[1]
                 const code = String(children).replace(/\n$/, '')
@@ -65,7 +68,7 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
                       <span>{language}</span>
                       <CopyButton text={code} label="Copy code" />
                     </span>
-                    <code className={className} {...props}>{code}</code>
+                    <SyntaxHighlighter language={language} style={oneDark as Record<string, CSSProperties>} PreTag="div" customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem' }} {...props}>{code}</SyntaxHighlighter>
                   </span>
                 )
               },

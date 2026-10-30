@@ -42,7 +42,6 @@ export default function ChatPage() {
               currentSessionId={chat.sessionId}
               onResume={(id, messages) => {
                 chat.loadSession(id, messages)
-                setIsSidebarOpen(false)
               }}
               onNew={() => {
                 chat.newSession()

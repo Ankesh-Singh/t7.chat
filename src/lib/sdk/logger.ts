@@ -1,7 +1,7 @@
 import type { InferenceLog } from './types'
 
-export function sendLog(log: InferenceLog, authToken?: string): void {
-  const base = process.env.NEXT_PUBLIC_APP_URL
+export function sendLog(log: InferenceLog, authToken?: string, logUrl?: string): void {
+  const base = logUrl || process.env.NEXT_PUBLIC_APP_URL
   if (!base) return
   fetch(`${base}/api/ingest`, {
     method: 'POST',

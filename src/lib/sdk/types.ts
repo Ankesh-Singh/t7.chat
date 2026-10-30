@@ -7,6 +7,7 @@ export interface ChatOptions {
   signal?: AbortSignal
   reasoningEffort?: ReasoningEffort
   authToken?: string
+  logUrl?: string
 }
 
 export interface LLMProvider {

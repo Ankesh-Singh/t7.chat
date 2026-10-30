@@ -1,50 +1,60 @@
 # T7 Chat
 
-[How It Worked](How%20It%20Worked.md)
+A fast, production-oriented, multi-provider chat workspace with a Notion-style interface.
 
-Production-ready multi-provider AI chat with BYOK, Supabase authentication, encrypted account keys, streaming responses, inference telemetry, and Cloudflare deployment support.
+## What changed
 
-## Requirements
+- BYOK architecture: users add their own provider key in the app.
+- Keys live in browser `sessionStorage`; they are sent only with the active request and never stored in server environment variables.
+- The model picker uses the reference interaction: provider rail, searchable live catalog, connected-key indicators, and model metadata.
+- Each provider catalog is fetched from that provider's official `/models` endpoint.
+- Streaming chat supports stop, retry, Markdown, tables, links, and copyable code blocks.
+- Local conversation history includes search, rename, and delete.
+- Notion-style dark mode is the default; light mode is available from the compact top bar toggle and persists per browser.
+- Session search supports title and message-content matches, `Ctrl/Cmd + K` focus, and a second confirmation before deletion.
+- The supplied `/public/applogo.png` asset is used for the favicon, dashboard, sidebar, and empty-state branding.
+- Optional Supabase sync and inference analytics.
+- Cloudflare Workers deployment through OpenNext.
 
-- Node.js 20+
-- pnpm
-- Supabase project with Email/Password auth
-- Cloudflare account for deployment
+## Providers
+
+| Provider | Official API | Key page |
+|---|---|---|
+| OpenAI | `https://api.openai.com/v1` | https://platform.openai.com/api-keys |
+| Anthropic | `https://api.anthropic.com/v1` | https://console.anthropic.com/settings/keys |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta` | https://aistudio.google.com/apikey |
+| Groq | `https://api.groq.com/openai/v1` | https://console.groq.com/keys |
+| Mistral | `https://api.mistral.ai/v1` | https://console.mistral.ai/api-keys |
+| xAI | `https://api.x.ai/v1` | https://console.x.ai |
+| OpenRouter | `https://openrouter.ai/api/v1` | https://openrouter.ai/settings/keys |
+
+OpenAI, Groq, Mistral, xAI, and OpenRouter use their OpenAI-compatible chat endpoints. Anthropic uses Messages streaming. Gemini uses `streamGenerateContent`. The provider catalog is refreshed with the user's key, so newly released or account-specific models appear without a redeploy.
 
 ## Local setup
 
 ```bash
 pnpm install
-cp .env.example .env.local
+copy .env.example .env.local
 pnpm dev
 ```
 
-Open `http://localhost:3000/chat`.
+Open `/chat`, select the model button in the composer, open **API keys**, and add a key for the provider you want to use. Without Supabase, chats remain local to the browser and the dashboard is empty.
 
-Set the Supabase URL, anon key, service-role key, and `AUTH_ENCRYPTION_KEY` in `.env.local`. Apply the SQL files in `supabase/migrations/` in filename order. Keep `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_ENCRYPTION_KEY`, `DATABASE_URL`, and provider keys out of source control; provider keys are entered in the app.
-
-## Checks
-
-```bash
-pnpm test
-pnpm lint
-pnpm build
-```
-
-## Cloudflare deployment
+## Cloudflare
 
 ```bash
 npx wrangler login
 pnpm cf:build
+pnpm cf:preview
 pnpm cf:deploy
 ```
 
-Configure the public Supabase URL/key and app URL as Worker variables. Configure the service-role and encryption values as Worker secrets.
+No provider secret is required in Cloudflare. If you enable Supabase, configure its public URL/anon key and service-role key through Cloudflare environment variables/secrets. Set `NEXT_PUBLIC_APP_URL` only if you want inference logs posted back to the deployed app.
 
-Supported providers include OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI, and OpenRouter. Models are loaded from provider APIs after a key is connected.
+The runtime uses Web-standard `fetch`, `ReadableStream`, and `AbortSignal` APIs, so provider requests work on Cloudflare Workers.
 
-## Design notes
+## Documentation images
 
-The architecture, scaling path, tradeoffs, and improvement ideas are summarized in [How It Worked](How%20It%20Worked.md).
+![Architecture diagram](image.png)
 
-MIT License · Built by [Ankesh Singh](https://github.com/Ankesh-Singh)
+![Chat interface](image-1.png)

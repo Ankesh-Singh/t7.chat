@@ -20,22 +20,19 @@ export const PROVIDERS: ProviderConfig[] = [
 ]
 
 export const DEFAULT_MODEL: ModelOption = {
-  id: 'gpt-6.1-sol',
-  label: 'GPT-6.1 Sol',
+  id: 'gpt-4.1-mini',
+  label: 'GPT-4.1 Mini',
   provider: 'openai',
-  description: 'Balanced intelligence, speed, and cost',
+  description: 'Fast, economical coding and writing',
 }
 
 export const FALLBACK_MODELS: ModelOption[] = [
   DEFAULT_MODEL,
-  { id: 'gpt-6-astra', label: 'GPT-6 Astra', provider: 'openai', description: 'Highest intelligence for demanding work' },
-  { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', provider: 'openai', description: 'Fast visual reasoning and clear writing' },
-  { id: 'gpt-6-luna', label: 'GPT-6 Luna', provider: 'openai', description: 'Fast, focused, cost-sensitive work' },
-  { id: 'gpt-5-mini', label: 'GPT-5 Mini', provider: 'openai', description: 'Efficient GPT-5 for everyday workloads' },
-  { id: 'gpt-5-nano', label: 'GPT-5 Nano', provider: 'openai', description: 'Lowest-cost GPT-5 for high-volume tasks' },
-  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', provider: 'openai', description: 'Fast, economical coding and writing' },
+  { id: 'gpt-4.1', label: 'GPT-4.1', provider: 'openai', description: 'Strong general-purpose reasoning and coding' },
   { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', provider: 'openai', description: 'Lowest-cost GPT-4.1 for simple tasks' },
+  { id: 'gpt-4o', label: 'GPT-4o', provider: 'openai', description: 'Multimodal general-purpose model' },
   { id: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'openai', description: 'Affordable multimodal everyday model' },
+  { id: 'gpt-4-turbo', label: 'GPT-4 Turbo', provider: 'openai', description: 'High-capability GPT-4 model' },
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', provider: 'anthropic', description: 'Fast Claude model for everyday work' },
   { id: 'claude-opus-5', label: 'Claude Opus 5', provider: 'anthropic', description: 'Anthropic model for demanding agentic work' },
   { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic', description: 'Fast, efficient Claude for high-volume work' },

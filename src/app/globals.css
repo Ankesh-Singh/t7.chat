@@ -408,7 +408,8 @@ button:disabled {
   font-size: 0.82em;
 }
 
-.markdown-body pre {
+.code-block {
+  display: block;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
@@ -416,8 +417,28 @@ button:disabled {
   color: #e8eaed;
 }
 
-.markdown-body pre > .code-block {
+.code-block .syntax-code {
   display: block;
+  overflow-x: auto;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre;
+}
+
+.code-block code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-body pre {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: #202124;
+  color: #e8eaed;
 }
 
 .markdown-body pre code {

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, RefreshCw, Sparkles } from 'lucide-react'
 import type { ChatMessage, ModelOption } from '@/lib/sdk/types'
 
@@ -62,13 +63,13 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
                 const code = String(children).replace(/\n$/, '')
                 if (!language) return <code className={className}>{children}</code>
                 return (
-                  <span className="code-block">
+                  <div className="code-block">
                     <span className="code-header">
                       <span>{language}</span>
                       <CopyButton text={code} label="Copy code" />
                     </span>
-                    <SyntaxHighlighter language={language} PreTag="div" customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem', color: 'var(--foreground)' }}>{code}</SyntaxHighlighter>
-                  </span>
+                    <SyntaxHighlighter language={language} style={oneDark} PreTag="div" codeTagProps={{ className: 'syntax-code' }} customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem', lineHeight: 1.65 }}>{code}</SyntaxHighlighter>
+                  </div>
                 )
               },
             }}

@@ -100,6 +100,7 @@ export default function ChatPage() {
           reasoningEffort={chat.reasoningEffort}
           setReasoningEffort={chat.setReasoningEffort}
           keys={providerKeys.keys}
+          keysLoading={providerKeys.loading}
           onOpenSettings={() => setIsSettingsOpen(true)}
           requireAuthentication={auth.configured && !auth.user}
           onRequireAuth={() => setIsAuthOpen(true)}

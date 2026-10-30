@@ -25,11 +25,12 @@ interface Props {
   reasoningEffort: ReasoningEffort
   setReasoningEffort: (effort: ReasoningEffort) => void
   keys: Partial<Record<Provider, string>>
+  keysLoading?: boolean
   onOpenSettings: () => void
   requireAuthentication?: boolean
   onRequireAuth?: () => void
 }
-export default function ChatInput({ onSend, onStop, isStreaming, model, setModel, reasoningEffort, setReasoningEffort, keys, onOpenSettings, requireAuthentication, onRequireAuth }: Props) {
+export default function ChatInput({ onSend, onStop, isStreaming, model, setModel, reasoningEffort, setReasoningEffort, keys, keysLoading = false, onOpenSettings, requireAuthentication, onRequireAuth }: Props) {
   const [value, setValue] = useState('')
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -115,6 +116,10 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   const submit = () => {
     const content = value.trim()
     if (!content || isStreaming) return
+    if (keysLoading) {
+      toast('Loading your saved provider keys. Try again in a moment.', 'info')
+      return
+    }
     if (requireAuthentication && !keys[activeModel.provider]) {
       toast('Sign in or create an account before continuing without a provider key.', 'info')
       onRequireAuth?.()

@@ -7,6 +7,17 @@ function isChatModel(id: string) {
   return !/(embedding|moderation|whisper|transcri|tts|realtime|image|audio|search-preview)/i.test(id)
 }
 
+function displayModelLabel(id: string, provider: Provider) {
+  if (provider !== 'openai') return id
+  return id
+    .replace(/^gpt/i, 'GPT')
+    .replace(/-mini$/i, ' Mini')
+    .replace(/-nano$/i, ' Nano')
+    .replace(/-turbo$/i, ' Turbo')
+}
+
+const preferredOpenAIModels = ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo']
+
 function headersFor(provider: Provider, apiKey: string): Record<string, string> {
   if (provider === 'google') return { 'x-goog-api-key': apiKey }
   if (provider === 'anthropic') return { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
@@ -43,9 +54,18 @@ export async function POST(req: NextRequest) {
         const rawId = String(item.id ?? item.name ?? '')
         const id = rawId.replace(/^models\//, '')
         const capabilities = Array.isArray(item.supportedGenerationMethods) ? item.supportedGenerationMethods.map(String) : []
-        return { id, label: id, provider, description: String(item.owned_by ?? item.displayName ?? config.description), contextWindow: Number(item.context_window ?? item.inputTokenLimit ?? 0) || undefined, capabilities, isDynamic: true }
+        return { id, label: displayModelLabel(id, provider), provider, description: String(item.owned_by ?? item.displayName ?? config.description), contextWindow: Number(item.context_window ?? item.inputTokenLimit ?? 0) || undefined, capabilities, isDynamic: true }
       })
       .filter(model => isChatModel(model.id) && (provider !== 'google' || model.capabilities.length === 0 || model.capabilities.includes('generateContent')))
+      .sort((left, right) => {
+        if (provider !== 'openai') return left.label.localeCompare(right.label)
+        const leftRank = preferredOpenAIModels.indexOf(left.id)
+        const rightRank = preferredOpenAIModels.indexOf(right.id)
+        if (leftRank === -1 && rightRank === -1) return left.label.localeCompare(right.label)
+        if (leftRank === -1) return 1
+        if (rightRank === -1) return -1
+        return leftRank - rightRank
+      })
       .slice(0, 200)
     return NextResponse.json({ provider, models })
   } catch (error) {

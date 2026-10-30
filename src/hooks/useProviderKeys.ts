@@ -17,6 +17,7 @@ function readKeys(): Partial<Record<Provider, string>> {
 
 export function useProviderKeys(userId?: string) {
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>(readKeys)
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const previousUserId = useRef<string | undefined>(undefined)
 
   useEffect(() => {
@@ -32,14 +33,17 @@ export function useProviderKeys(userId?: string) {
     }
     previousUserId.current = userId
     const load = async () => {
-      const client = getSupabaseBrowser()
-      const { data } = client ? await client.auth.getSession() : { data: { session: null } }
-      if (!data.session) return
-      const response = await fetch('/api/provider-keys', { headers: { Authorization: `Bearer ${data.session.access_token}` } })
-      if (!response.ok) return
-      const body = await response.json() as { keys?: Partial<Record<Provider, string>> }
-      const next = body.keys ?? {}
-      setKeys(next)
+      try {
+        const client = getSupabaseBrowser()
+        const { data } = client ? await client.auth.getSession() : { data: { session: null } }
+        if (!data.session) return
+        const response = await fetch('/api/provider-keys', { headers: { Authorization: `Bearer ${data.session.access_token}` }, cache: 'no-store' })
+        if (!response.ok) return
+        const body = await response.json() as { keys?: Partial<Record<Provider, string>> }
+        setKeys(body.keys ?? {})
+      } finally {
+        setLoadedFor(userId)
+      }
     }
     void load()
   }, [userId])
@@ -80,6 +84,6 @@ export function useProviderKeys(userId?: string) {
     await updateKey(provider, '')
   }, [updateKey, userId])
 
-  return { keys, updateKey, clearKey }
+  return { keys, loading: Boolean(userId && loadedFor !== userId), updateKey, clearKey }
 }
 

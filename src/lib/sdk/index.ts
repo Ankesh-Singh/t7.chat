@@ -33,7 +33,7 @@ export class LLMClient {
         output_preview: redactPII(output).slice(0, 100),
         error,
       }
-      sendLog(log)
+      sendLog(log, options?.authToken)
     }
   }
 }

@@ -20,7 +20,6 @@ export function useConversations(userId?: string) {
 
   useEffect(() => {
     let active = true
-    const sync = () => { if (!userId) setSessions(readConversations()) }
     const load = async () => {
       if (!userId) {
         sync()
@@ -44,6 +43,7 @@ export function useConversations(userId?: string) {
         if (active) setLoading(false)
       }
     }
+    const sync = () => { if (userId) void load(); else setSessions(readConversations()) }
     void load()
     window.addEventListener(CONVERSATIONS_EVENT, sync)
     window.addEventListener('storage', sync)

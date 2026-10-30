@@ -6,6 +6,7 @@ export type ReasoningEffort = 'low' | 'medium' | 'high'
 export interface ChatOptions {
   signal?: AbortSignal
   reasoningEffort?: ReasoningEffort
+  authToken?: string
 }
 
 export interface LLMProvider {

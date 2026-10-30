@@ -158,6 +158,7 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
           persistConversation(sessionId, next)
         }
       }
+      window.dispatchEvent(new Event(CONVERSATIONS_EVENT))
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return
       const message = error instanceof Error ? error.message : 'Failed to get a response.'

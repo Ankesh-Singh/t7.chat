@@ -35,27 +35,18 @@ flowchart LR
 - The service-role key stays on the server. It is never exposed to the browser.
 - Authenticated provider keys are encrypted and account-scoped. Guest keys stay in the browser session.
 
-## Sidebar behavior
+## Sidebar and dashboard behavior
 
-The sidebar keeps a local copy so a new conversation appears immediately. Authenticated sessions are then refreshed from the server.
-
-Refreshes are debounced and ordered. This matters during streaming because every token can trigger a local update; an older request must not overwrite a newer session list.
-
-If the server has not persisted a new session yet, the local copy remains visible instead of being replaced by an empty response.
-
-## Metrics behavior
-
-Inference logs contain only operational data: provider, model, latency, token estimates, status, and short redacted previews.
-
-The metrics and session APIs use `no-store`, so the dashboard does not reuse stale responses. Realtime inserts make new data appear quickly, while a short refresh repairs the view if a realtime event is missed.
-
-Failed ingestion writes are recorded in `failed_logs` for investigation.
+- The sidebar merges local and server sessions so a refresh cannot discard browser-only threads.
+- Missing local sessions are backfilled to Supabase after authentication.
+- Dashboard reads use `no-store`; realtime inserts are combined with a short refresh fallback.
+- Failed telemetry writes are recorded in `failed_logs` when the database is available.
 
 ## Design questions
 
 ### Why keep the server as the trust boundary?
 
-The browser should feel immediate, but it should not decide which account owns a session or a metric. The server applies the same ownership rule to chat, sessions, keys, and analytics.
+The browser should feel immediate, but it should not decide which account owns a session or metric. Server routes apply the same ownership rule to chat, sessions, keys, and analytics.
 
 ### How would I scale this?
 
@@ -72,7 +63,5 @@ Realtime is responsive but not a delivery guarantee. A short no-store refresh is
 ## Production checklist
 
 - Apply the SQL migrations in filename order.
-- Use a real Supabase `service_role` key on the server; never use the anon key in that variable.
-- Keep encryption and database secrets out of source control.
-- Enable Supabase realtime for `inference_logs` if live dashboard inserts are needed.
-- Monitor `failed_logs` and provider error rates before scaling traffic.
+- Keep service-role, encryption, and database secrets out of source control.
+- Enable Supabase realtime for `inference_logs` if live dashboard inserts are required.

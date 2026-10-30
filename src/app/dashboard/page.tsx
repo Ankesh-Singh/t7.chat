@@ -5,16 +5,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useRealtimeMetrics } from '@/hooks/useRealtimeMetrics'
 import LatencyChart from '@/components/dashboard/LatencyChart'
 import ThroughputChart from '@/components/dashboard/ThroughputChart'
-import ErrorsChart from '@/components/dashboard/ErrorsChart'
 import Link from 'next/link'
 import { BarChart2, ArrowLeft, ChevronDown } from 'lucide-react'
 import ThemeToggle from '@/components/chat/ThemeToggle'
 import { useAuth } from '@/hooks/useAuth'
+import { PROVIDERS } from '@/constants/models'
 
 export default function DashboardPage() {
   const auth = useAuth()
   const { logs: rawLogs, loading } = useRealtimeMetrics(auth.user?.id, auth.loading)
   const [modelFilter, setModelFilter] = useState<string>('all')
+  const [providerFilter, setProviderFilter] = useState<string>('all')
   const [timeRange, setTimeRange] = useState<string>('all')
   const [page, setPage] = useState(0)
 
@@ -27,10 +28,10 @@ export default function DashboardPage() {
   })
 
   const logs = filteredByTime.filter(l => Boolean(l.model && l.model.trim() !== ''))
-  const filtered = modelFilter === 'all' ? logs : logs.filter(l => l.model === modelFilter)
-  
- 
-  const uniqueModels = [...new Set(rawLogs.filter(l => l.model).map(l => l.model))]
+  const providerLogs = providerFilter === 'all' ? logs : logs.filter(l => l.provider === providerFilter)
+  const uniqueModels = [...new Set(providerLogs.filter(l => l.model).map(l => l.model))]
+  const activeModelFilter = modelFilter !== 'all' && uniqueModels.includes(modelFilter) ? modelFilter : 'all'
+  const filtered = activeModelFilter === 'all' ? providerLogs : providerLogs.filter(l => l.model === activeModelFilter)
 
   const avgLatency = filtered.length > 0
     ? Math.round(filtered.reduce((s, l) => s + l.latency_ms, 0) / filtered.length)
@@ -63,10 +64,11 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto sm:gap-3">
+        <div className="flex w-full flex-wrap items-end gap-2 sm:ml-auto sm:w-auto sm:gap-3">
           <ThemeToggle />
-          <FilterMenu value={timeRange} onChange={setTimeRange} options={[['1h', 'Last 1 hour'], ['6h', 'Last 6 hours'], ['24h', 'Last 24 hours'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']]} />
-          <FilterMenu value={modelFilter} onChange={setModelFilter} options={[['all', 'All Models'], ...uniqueModels.map(model => [model, model] as [string, string])]} />
+          <FilterGroup label="Time range"><FilterMenu value={timeRange} onChange={setTimeRange} options={[['1h', 'Last 1 hour'], ['6h', 'Last 6 hours'], ['24h', 'Last 24 hours'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']]} /></FilterGroup>
+          <FilterGroup label="Provider"><FilterMenu value={providerFilter} onChange={setProviderFilter} options={[['all', 'All providers'], ...PROVIDERS.map(provider => [provider.id, provider.label] as [string, string])]} /></FilterGroup>
+          <FilterGroup label="Model"><FilterMenu value={activeModelFilter} onChange={setModelFilter} options={[['all', 'All models'], ...uniqueModels.map(model => [model, model] as [string, string])]} /></FilterGroup>
         </div>
       </header>
 
@@ -76,8 +78,8 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />)}
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {[1,2,3].map(i => <div key={i} className="h-[280px] rounded-xl bg-card border border-border animate-pulse" />)}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[1,2].map(i => <div key={i} className="h-[280px] rounded-xl bg-card border border-border animate-pulse" />)}
             </div>
           </div>
         ) : filtered.length === 0 ? (
@@ -103,10 +105,9 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard title="Inference performance" description="Latency, throughput, and request health across models.">
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
                 <LatencyChart logs={filtered} />
                 <ThroughputChart logs={filtered} />
-                <ErrorsChart logs={filtered} />
               </div>
             </SectionCard>
 
@@ -213,6 +214,10 @@ function FilterMenu({ value, onChange, options }: { value: string; onChange: (va
       )}
     </div>
   )
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none"><span className="px-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">{label}</span>{children}</div>
 }
 
 function SectionCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {

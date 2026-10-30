@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const validation = validateProviderKey(provider, apiKey)
   if (!validation.valid) return Response.json({ error: validation.message }, { status: 400 })
   const user = await getAuthenticatedUser(req)
-  const db = supabaseForRequest(req) ?? supabaseServer
+  const db = supabaseServer ?? supabaseForRequest(req)
 
   if (db && user) {
     const sessionResult = await db.from('sessions').upsert({ id: sessionId, user_id: user.id, last_active: new Date().toISOString() })

@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const headers = { 'Cache-Control': 'private, no-store' }
   const user = await getAuthenticatedUser(request)
   if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401, headers })
-  const db = supabaseForRequest(request) ?? supabaseServer
+  const db = supabaseServer ?? supabaseForRequest(request)
   if (!db) return NextResponse.json({ error: 'Database is not configured.' }, { status: 503, headers })
   const { data, error } = await db
     .from('sessions')
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const headers = { 'Cache-Control': 'private, no-store' }
   const user = await getAuthenticatedUser(req)
   if (!user) return NextResponse.json({ id }, { headers })
-  const db = supabaseForRequest(req) ?? supabaseServer
+  const db = supabaseServer ?? supabaseForRequest(req)
   if (!db) return NextResponse.json({ error: 'Database is not configured.' }, { status: 503, headers })
   const { data, error } = await db
     .from('sessions')
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   const headers = { 'Cache-Control': 'private, no-store' }
   const user = await getAuthenticatedUser(req)
   if (!user) return NextResponse.json({ ok: true }, { headers })
-  const db = supabaseForRequest(req) ?? supabaseServer
+  const db = supabaseServer ?? supabaseForRequest(req)
   if (!db) return NextResponse.json({ error: 'Database is not configured.' }, { status: 503, headers })
   const { error } = await db
     .from('sessions')

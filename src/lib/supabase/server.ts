@@ -1,8 +1,21 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { NextRequest } from 'next/server'
 
-export const supabaseServer: SupabaseClient | null = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+function isServiceRoleKey(key: string) {
+  try {
+    const encoded = key.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
+    if (!encoded) return false
+    const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')
+    const claims = JSON.parse(atob(padded)) as { role?: string }
+    return claims.role === 'service_role'
+  } catch {
+    return false
+  }
+}
+
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+export const supabaseServer: SupabaseClient | null = process.env.NEXT_PUBLIC_SUPABASE_URL && serviceRoleKey && isServiceRoleKey(serviceRoleKey)
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey)
   : null
 
 export function supabaseForRequest(request: NextRequest): SupabaseClient | null {

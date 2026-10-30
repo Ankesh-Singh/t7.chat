@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const user = await getAuthenticatedUser(req)
-    const db = supabaseForRequest(req) ?? supabaseServer
+    const db = supabaseServer ?? supabaseForRequest(req)
     if (!db) return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
     const { session_id, provider, model, latency_ms, prompt_tokens, completion_tokens, status, error: logErrorInput } = body
 

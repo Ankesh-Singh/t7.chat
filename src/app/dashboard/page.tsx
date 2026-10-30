@@ -1,13 +1,13 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRealtimeMetrics } from '@/hooks/useRealtimeMetrics'
 import LatencyChart from '@/components/dashboard/LatencyChart'
 import ThroughputChart from '@/components/dashboard/ThroughputChart'
 import ErrorsChart from '@/components/dashboard/ErrorsChart'
 import Link from 'next/link'
-import { BarChart2, ArrowLeft } from 'lucide-react'
+import { BarChart2, ArrowLeft, ChevronDown } from 'lucide-react'
 import ThemeToggle from '@/components/chat/ThemeToggle'
 
 export default function DashboardPage() {
@@ -63,26 +63,8 @@ export default function DashboardPage() {
         </div>
         <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto sm:gap-3">
           <ThemeToggle />
-          <select
-            value={timeRange}
-            onChange={e => setTimeRange(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:flex-none sm:px-3 sm:text-sm"
-          >
-            <option value="1h">Last 1 hour</option>
-            <option value="6h">Last 6 hours</option>
-            <option value="24h">Last 24 hours</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="all">All time</option>
-          </select>
-          <select
-            value={modelFilter}
-            onChange={e => setModelFilter(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:flex-none sm:px-3 sm:text-sm"
-          >
-            <option value="all">All Models</option>
-            {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <FilterMenu value={timeRange} onChange={setTimeRange} options={[['1h', 'Last 1 hour'], ['6h', 'Last 6 hours'], ['24h', 'Last 24 hours'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']]} />
+          <FilterMenu value={modelFilter} onChange={setModelFilter} options={[['all', 'All Models'], ...uniqueModels.map(model => [model, model] as [string, string])]} />
         </div>
       </header>
 
@@ -195,6 +177,38 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function FilterMenu({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: [string, string][] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const label = options.find(option => option[0] === value)?.[1] ?? value
+
+  useEffect(() => {
+    const close = (event: PointerEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative min-w-0 flex-1 sm:flex-none">
+      <button type="button" onClick={() => setOpen(current => !current)} className="flex h-9 w-full items-center justify-between gap-3 rounded-lg bg-card/70 px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted sm:min-w-32 sm:text-sm" aria-expanded={open}>
+        <span className="truncate">{label}</span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+0.4rem)] z-50 min-w-full overflow-hidden rounded-xl border border-border/70 bg-popover/95 p-1 shadow-xl backdrop-blur-xl">
+          {options.map(([option, optionLabel]) => (
+            <button key={option} type="button" onClick={() => { onChange(option); setOpen(false) }} className={`block w-full rounded-lg px-3 py-2 text-left text-xs transition-colors sm:text-sm ${value === option ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}>
+              {optionLabel}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -97,6 +97,7 @@ export function useChat(keys: Partial<Record<Provider, string>>) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ id }),
+      cache: 'no-store',
     }))
   }, [])
 

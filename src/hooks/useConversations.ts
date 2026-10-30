@@ -20,35 +20,46 @@ export function useConversations(userId?: string) {
 
   useEffect(() => {
     let active = true
+    let requestSerial = 0
+    let refreshTimer: number | undefined
     const load = async () => {
+      const requestId = ++requestSerial
       if (!userId) {
-        sync()
+        if (active) setSessions(readConversations())
         setLoading(false)
         return
       }
       try {
         const headers = await getAuthHeaders()
-        const response = await fetch('/api/sessions', { headers })
+        const response = await fetch('/api/sessions', { headers, cache: 'no-store' })
         if (!response.ok) throw new Error('Could not load sessions')
         const rows = await response.json() as Array<{ id: string; last_active: string; messages?: ChatMessage[] }>
-        if (!active) return
+        if (!active || requestId !== requestSerial) return
         setSessions(rows.map(row => {
           const messages = row.messages ?? []
           const firstUser = messages.find(message => message.role === 'user')?.content.trim()
           return { id: row.id, title: firstUser?.slice(0, 54) || 'New conversation', updatedAt: row.last_active, messages }
         }))
       } catch {
-        if (active) sync()
+        if (active && requestId === requestSerial) setSessions(readConversations())
       } finally {
-        if (active) setLoading(false)
+        if (active && requestId === requestSerial) setLoading(false)
       }
     }
-    const sync = () => { if (userId) void load(); else setSessions(readConversations()) }
+    const sync = () => {
+      if (!userId) {
+        setSessions(readConversations())
+        return
+      }
+      if (refreshTimer) window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(() => void load(), 150)
+    }
     void load()
     window.addEventListener(CONVERSATIONS_EVENT, sync)
     window.addEventListener('storage', sync)
     return () => {
       active = false
+      if (refreshTimer) window.clearTimeout(refreshTimer)
       window.removeEventListener(CONVERSATIONS_EVENT, sync)
       window.removeEventListener('storage', sync)
     }
@@ -66,6 +77,7 @@ export function useConversations(userId?: string) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ id }),
+      cache: 'no-store',
     }))
   }, [sessions, userId])
 

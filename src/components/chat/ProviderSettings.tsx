@@ -34,7 +34,6 @@ export default function ProviderSettings({ keys, onSave, onClear, onClose, user 
     // Sync encrypted keys loaded after the modal mounts.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(keys[active] || '')
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowKey(false)
   }, [active, keys])
 

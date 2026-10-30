@@ -31,10 +31,12 @@ create table if not exists public.inference_logs (
   status text not null default 'success',
   input_preview text not null default '',
   output_preview text not null default '',
+  error text,
   created_at timestamptz not null default now()
 );
 
 alter table public.inference_logs add column if not exists user_id uuid references auth.users(id) on delete set null;
+alter table public.inference_logs add column if not exists error text;
 
 create table if not exists public.failed_logs (
   id uuid primary key default gen_random_uuid(),

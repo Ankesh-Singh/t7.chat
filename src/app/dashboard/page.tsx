@@ -9,9 +9,11 @@ import ErrorsChart from '@/components/dashboard/ErrorsChart'
 import Link from 'next/link'
 import { BarChart2, ArrowLeft, ChevronDown } from 'lucide-react'
 import ThemeToggle from '@/components/chat/ThemeToggle'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function DashboardPage() {
-  const { logs: rawLogs, loading } = useRealtimeMetrics()
+  const auth = useAuth()
+  const { logs: rawLogs, loading } = useRealtimeMetrics(auth.user?.id, auth.loading)
   const [modelFilter, setModelFilter] = useState<string>('all')
   const [timeRange, setTimeRange] = useState<string>('all')
   const [page, setPage] = useState(0)
@@ -154,7 +156,7 @@ export default function DashboardPage() {
                           <td className="px-5 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
                             {new Date(log.created_at).toLocaleTimeString()}
                           </td>
-                          <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground">{log.session_id.slice(0, 8)}</td>
+                          <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground">{log.session_id?.slice(0, 8) ?? '—'}</td>
                           <td className="px-5 py-2.5 text-xs">{log.model}</td>
                           <td className={`px-5 py-2.5 text-xs font-medium ${latClass}`}>{latMs}ms</td>
                           <td className="px-5 py-2.5 text-xs text-muted-foreground">{log.prompt_tokens + log.completion_tokens}</td>

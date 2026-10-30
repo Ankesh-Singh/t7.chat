@@ -50,4 +50,5 @@ Add the Supabase URL, Supabase anon key, service-role key, encryption key, and p
 
 ## License
 
-MIT License · Built by [Ankesh Singh](https://github.com/Ankesh-Singh)
+MIT License ·
+Built by [Ankesh Singh](aanks.xyz)

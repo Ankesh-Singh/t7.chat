@@ -57,7 +57,7 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
             components={{
               a: ({ children, ...props }) => <a {...props} target="_blank" rel="noreferrer">{children}</a>,
               pre: ({ children }) => <>{children}</>,
-              code: ({ className, children, ...props }) => {
+              code: ({ className, children }) => {
                 const language = /language-(\w+)/.exec(className || '')?.[1]
                 const code = String(children).replace(/\n$/, '')
                 if (!language) return <code className={className} {...props}>{children}</code>
@@ -67,7 +67,7 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
                       <span>{language}</span>
                       <CopyButton text={code} label="Copy code" />
                     </span>
-                    <SyntaxHighlighter language={language} PreTag="div" customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem', color: 'var(--foreground)' }} {...props}>{code}</SyntaxHighlighter>
+                    <SyntaxHighlighter language={language} PreTag="div" customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem', color: 'var(--foreground)' }}>{code}</SyntaxHighlighter>
                   </span>
                 )
               },

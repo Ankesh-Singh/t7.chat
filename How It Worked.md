@@ -14,11 +14,17 @@ flowchart TB
   H --> G
   G --> I["Dashboard"]
   G -. "realtime + 10s refresh" .-> I
+  C --> Q1["Why this split?"]
+  Q1 --> A1["Fast UI; server-side control"]
+  G --> Q2["How would I scale this?"]
+  Q2 --> A2["Queue telemetry; paginate metrics"]
+  I --> Q3["What could improve?"]
+  Q3 --> A3["Retry telemetry; add end-to-end tests"]
 ```
 
-## Key decisions
+## Thought process
 
-- **Why this split?** The browser stays responsive while the server keeps user data and provider calls behind authentication.
-- **How would I scale this?** Move telemetry writes to a queue, paginate dashboard reads, and keep realtime updates scoped to one user.
-- **What could improve?** Add durable retries for telemetry and stronger end-to-end tests against a real Supabase project.
+- **Why this split?** Keep the UI responsive while the server controls user data and provider calls.
+- **How would I scale this?** Queue telemetry, paginate metrics, and scope realtime updates by user.
+- **What could improve?** Add durable telemetry retries and end-to-end tests against Supabase.
 - **Why the refresh fallback?** Realtime is fast, but the short refresh catches missed events without serving stale data.

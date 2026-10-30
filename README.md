@@ -43,4 +43,8 @@ Configure the public Supabase URL/key and app URL as Worker variables. Configure
 
 Supported providers include OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI, and OpenRouter. Models are loaded from provider APIs after a key is connected.
 
+## Design notes
+
+The architecture, scaling path, tradeoffs, and improvement ideas are summarized in [How It Worked](How%20It%20Worked.md).
+
 MIT License · Built by [Ankesh Singh](https://github.com/Ankesh-Singh)

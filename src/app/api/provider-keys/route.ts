@@ -7,6 +7,12 @@ import { validateProviderKey } from '@/lib/security/provider-key'
 
 const providers: Provider[] = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai', 'openrouter']
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message
+  return fallback
+}
+
 export async function GET(request: NextRequest) {
   if (!supabaseServer) return NextResponse.json({ error: 'Provider key storage is not configured on the server.' }, { status: 503 })
   const user = await getAuthenticatedUser(request)
@@ -20,7 +26,8 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({ keys })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to load provider keys.' }, { status: 500 })
+    console.error('Provider key load failed:', error)
+    return NextResponse.json({ error: errorMessage(error, 'Unable to load provider keys.') }, { status: 500 })
   }
 }
 
@@ -43,7 +50,8 @@ export async function PUT(request: NextRequest) {
     if (result.error) throw result.error
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to save provider key.' }, { status: 500 })
+    console.error('Provider key save failed:', error)
+    return NextResponse.json({ error: errorMessage(error, 'Unable to save provider key.') }, { status: 500 })
   }
 }
 

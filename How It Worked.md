@@ -18,6 +18,8 @@ flowchart LR
   G -. "realtime + refresh" .-> I
 ```
 
+![Architecture diagram](image.png)
+
 ## Request flow
 
 1. Supabase Auth signs the user in. The browser keeps the JWT and sends it with authenticated requests.
@@ -65,3 +67,7 @@ Realtime is responsive but not a delivery guarantee. A short no-store refresh is
 - Apply the SQL migrations in filename order.
 - Keep service-role, encryption, and database secrets out of source control.
 - Enable Supabase realtime for `inference_logs` if live dashboard inserts are required.
+
+## Interface reference
+
+![Chat interface](image-1.png)

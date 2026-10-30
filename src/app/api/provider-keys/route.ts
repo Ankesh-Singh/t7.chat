@@ -8,8 +8,9 @@ import { validateProviderKey } from '@/lib/security/provider-key'
 const providers: Provider[] = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai', 'openrouter']
 
 export async function GET(request: NextRequest) {
+  if (!supabaseServer) return NextResponse.json({ error: 'Provider key storage is not configured on the server.' }, { status: 503 })
   const user = await getAuthenticatedUser(request)
-  if (!user || !supabaseServer) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Authentication required. Sign in again before loading provider keys.' }, { status: 401 })
   try {
     const { data, error } = await supabaseServer.from('provider_keys').select('provider, encrypted_key, iv').eq('user_id', user.id)
     if (error) throw error
@@ -24,8 +25,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  if (!supabaseServer) return NextResponse.json({ error: 'Provider key storage is not configured on the server.' }, { status: 503 })
   const user = await getAuthenticatedUser(request)
-  if (!user || !supabaseServer) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Authentication required. Sign in again before saving a provider key.' }, { status: 401 })
   const body = await request.json() as { provider?: Provider; key?: string }
   if (!body.provider || !body.key) return NextResponse.json({ error: 'Provider and key are required.' }, { status: 400 })
   const validation = validateProviderKey(body.provider, body.key)
@@ -41,8 +43,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!supabaseServer) return NextResponse.json({ error: 'Provider key storage is not configured on the server.' }, { status: 503 })
   const user = await getAuthenticatedUser(request)
-  if (!user || !supabaseServer) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Authentication required. Sign in again before removing a provider key.' }, { status: 401 })
   const body = await request.json() as { provider?: Provider }
   if (!body.provider || !providers.includes(body.provider)) return NextResponse.json({ error: 'Provider is required.' }, { status: 400 })
   const { error } = await supabaseServer.from('provider_keys').delete().eq('user_id', user.id).eq('provider', body.provider)

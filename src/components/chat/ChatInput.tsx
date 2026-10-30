@@ -63,7 +63,11 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
       const data = await response.json() as { models?: ModelOption[] }
       const liveModels = data.models
       if (Array.isArray(liveModels) && liveModels.length) {
-        setModels(previous => [...previous.filter(item => item.provider !== provider), ...liveModels])
+        setModels(previous => {
+          const merged = [...FALLBACK_MODELS.filter(item => item.provider === provider), ...liveModels]
+          const unique = new Map(merged.map(item => [`${item.provider}:${item.id}`, item]))
+          return [...previous.filter(item => item.provider !== provider), ...unique.values()]
+        })
       }
     } catch {
       toast(`Could not load the live ${PROVIDERS.find(item => item.id === provider)?.label} catalog. Check your key or try again.`, 'error')

@@ -3,7 +3,7 @@ import { LLMClient } from '@/lib/sdk'
 import { byokProviders } from '@/lib/sdk/providers/byok'
 import { PROVIDERS } from '@/constants/models'
 import type { ChatMessage, Provider, ReasoningEffort } from '@/lib/sdk/types'
-import { supabaseServer } from '@/lib/supabase/server'
+import { supabaseForRequest, supabaseServer } from '@/lib/supabase/server'
 import { validateProviderKey } from '@/lib/security/provider-key'
 import { getAuthenticatedUser } from '@/lib/auth/server'
 
@@ -37,10 +37,13 @@ export async function POST(req: NextRequest) {
   const validation = validateProviderKey(provider, apiKey)
   if (!validation.valid) return Response.json({ error: validation.message }, { status: 400 })
   const user = await getAuthenticatedUser(req)
+  const db = supabaseForRequest(req) ?? supabaseServer
 
-  if (supabaseServer && user) {
-    await supabaseServer.from('sessions').upsert({ id: sessionId, user_id: user.id, last_active: new Date().toISOString() })
-    await supabaseServer.from('messages').insert({ session_id: sessionId, role: 'user', content: messages.at(-1)?.content ?? '' })
+  if (db && user) {
+    const sessionResult = await db.from('sessions').upsert({ id: sessionId, user_id: user.id, last_active: new Date().toISOString() })
+    if (sessionResult.error) return Response.json({ error: 'Could not save the conversation session.' }, { status: 500 })
+    const messageResult = await db.from('messages').insert({ session_id: sessionId, role: 'user', content: messages.at(-1)?.content ?? '' })
+    if (messageResult.error) return Response.json({ error: 'Could not save the conversation message.' }, { status: 500 })
   }
 
   const client = new LLMClient(byokProviders[provider])
@@ -53,8 +56,10 @@ export async function POST(req: NextRequest) {
           fullOutput += token
           controller.enqueue(encoder.encode(event({ text: token })))
         }
-        if (supabaseServer && user && fullOutput) {
-          await supabaseServer.from('messages').insert({ session_id: sessionId, role: 'assistant', content: fullOutput })
+        if (db && user && fullOutput) {
+          const messageResult = await db.from('messages').insert({ session_id: sessionId, role: 'assistant', content: fullOutput })
+          if (messageResult.error) console.error('Could not save assistant message:', messageResult.error.message)
+          await db.from('sessions').update({ last_active: new Date().toISOString() }).eq('id', sessionId).eq('user_id', user.id)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Error generating response.'

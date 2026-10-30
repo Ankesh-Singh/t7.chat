@@ -35,11 +35,15 @@ export function useConversations(userId?: string) {
         if (!response.ok) throw new Error('Could not load sessions')
         const rows = await response.json() as Array<{ id: string; last_active: string; messages?: ChatMessage[] }>
         if (!active || requestId !== requestSerial) return
-        setSessions(rows.map(row => {
+        const remoteSessions = rows.map(row => {
           const messages = row.messages ?? []
           const firstUser = messages.find(message => message.role === 'user')?.content.trim()
           return { id: row.id, title: firstUser?.slice(0, 54) || 'New conversation', updatedAt: row.last_active, messages }
-        }))
+        })
+        // Keep a just-created local thread visible if the server has not
+        // persisted it yet. A successful non-empty server response remains
+        // authoritative for an account with existing remote sessions.
+        setSessions(remoteSessions.length > 0 ? remoteSessions : readConversations())
       } catch {
         if (active && requestId === requestSerial) setSessions(readConversations())
       } finally {
@@ -71,7 +75,7 @@ export function useConversations(userId?: string) {
 
   const cancel = useCallback(async (id: string) => {
     const next = sessions.filter(session => session.id !== id)
-    if (!userId) localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(next))
+    localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(readConversations().filter(session => session.id !== id)))
     setSessions(next)
     void getAuthHeaders().then(authHeaders => fetch('/api/sessions', {
       method: 'PATCH',
@@ -79,7 +83,7 @@ export function useConversations(userId?: string) {
       body: JSON.stringify({ id }),
       cache: 'no-store',
     }))
-  }, [sessions, userId])
+  }, [sessions])
 
   const rename = useCallback((id: string, title: string) => {
     const next = readConversations().map(session => session.id === id ? { ...session, title } : session)

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase/server'
+import { supabaseForRequest, supabaseServer } from '@/lib/supabase/server'
 import { redactPII } from '@/lib/pii'
 import { getAuthenticatedUser } from '@/lib/auth/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  if (!supabaseServer) return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
   try {
     const body = await req.json()
     const user = await getAuthenticatedUser(req)
+    const db = supabaseForRequest(req) ?? supabaseServer
+    if (!db) return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
     const { session_id, provider, model, latency_ms, prompt_tokens, completion_tokens, status, error: logErrorInput } = body
 
     if (!session_id || !provider || !model || model === 'EMPTY') {
@@ -29,10 +30,10 @@ export async function POST(req: NextRequest) {
       output_preview: redactPII(body.output_preview ?? ''),
     }
 
-    const { error } = await supabaseServer.from('inference_logs').insert(payload)
+    const { error } = await db.from('inference_logs').insert(payload)
 
     if (error) {
-      await supabaseServer.from('failed_logs').insert({
+      await db.from('failed_logs').insert({
         payload: { ...payload, error: typeof logErrorInput === 'string' ? redactPII(logErrorInput).slice(0, 500) : null },
         error: error.message,
       })

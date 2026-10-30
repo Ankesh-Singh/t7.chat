@@ -68,7 +68,7 @@ export default function MessageBubble({ message, isStreaming, model, onRetry }: 
                       <span>{language}</span>
                       <CopyButton text={code} label="Copy code" />
                     </span>
-                    <SyntaxHighlighter language={language} style={oneDark as Record<string, CSSProperties>} PreTag="div" customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem' }} {...props}>{code}</SyntaxHighlighter>
+                    <SyntaxHighlighter language={language} style={oneDark as unknown as Record<string, CSSProperties>} PreTag="div" customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '0.9rem 1rem', fontSize: '0.8rem' }} {...props}>{code}</SyntaxHighlighter>
                   </span>
                 )
               },

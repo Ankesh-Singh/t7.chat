@@ -52,7 +52,7 @@ export function useConversations(userId?: string) {
         const rows = await response.json() as Array<{ id: string; last_active: string; messages?: ChatMessage[] }>
         if (!active || requestId !== requestSerial) return
         const remoteSessions = rows.map(row => {
-          const messages = row.messages ?? []
+          const messages = (row.messages ?? []).map(message => ({ role: message.role, content: message.content }))
           const firstUser = messages.find(message => message.role === 'user')?.content.trim()
           return { id: row.id, title: firstUser?.slice(0, 54) || 'New conversation', updatedAt: row.last_active, messages }
         })

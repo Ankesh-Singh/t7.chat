@@ -8,6 +8,7 @@ export interface ChatOptions {
   reasoningEffort?: ReasoningEffort
   authToken?: string
   logUrl?: string
+  onLog?: (log: InferenceLog) => Promise<void> | void
 }
 
 export interface LLMProvider {

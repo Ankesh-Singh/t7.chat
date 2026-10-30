@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { LLMClient } from '@/lib/sdk'
 import { byokProviders } from '@/lib/sdk/providers/byok'
 import { PROVIDERS } from '@/constants/models'
-import type { ChatMessage, Provider, ReasoningEffort } from '@/lib/sdk/types'
+import type { ChatMessage, InferenceLog, Provider, ReasoningEffort } from '@/lib/sdk/types'
 import { supabaseForRequest, supabaseServer } from '@/lib/supabase/server'
 import { validateProviderKey } from '@/lib/security/provider-key'
 import { getAuthenticatedUser } from '@/lib/auth/server'
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { messages, model, provider, apiKey, sessionId, reasoningEffort } = body
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100 || messages.some(message => !message || typeof message.content !== 'string' || message.content.length > 100_000) || !model || !provider || !sessionId || !apiKey?.trim()) {
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100 || messages.some(message => !message || (message.role !== 'user' && message.role !== 'assistant') || typeof message.content !== 'string' || message.content.length > 100_000) || !model || !provider || !sessionId || !apiKey?.trim()) {
     return Response.json({ error: 'Choose a model and add that provider API key first.' }, { status: 400 })
   }
   if (!PROVIDERS.some(item => item.id === provider) || !byokProviders[provider]) {
@@ -36,13 +36,14 @@ export async function POST(req: NextRequest) {
   }
   const validation = validateProviderKey(provider, apiKey)
   if (!validation.valid) return Response.json({ error: validation.message }, { status: 400 })
+  const cleanMessages = messages.map(message => ({ role: message.role, content: message.content }))
   const user = await getAuthenticatedUser(req)
   const db = supabaseServer ?? supabaseForRequest(req)
 
   if (db && user) {
     const sessionResult = await db.from('sessions').upsert({ id: sessionId, user_id: user.id, last_active: new Date().toISOString() })
     if (sessionResult.error) return Response.json({ error: 'Could not save the conversation session.' }, { status: 500 })
-    const messageResult = await db.from('messages').insert({ session_id: sessionId, role: 'user', content: messages.at(-1)?.content ?? '' })
+    const messageResult = await db.from('messages').insert({ session_id: sessionId, role: 'user', content: cleanMessages.at(-1)?.content ?? '' })
     if (messageResult.error) return Response.json({ error: 'Could not save the conversation message.' }, { status: 500 })
   }
 
@@ -52,7 +53,20 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let fullOutput = ''
       try {
-        for await (const token of client.chat(messages, model, sessionId, apiKey, { signal: req.signal, reasoningEffort, authToken: req.headers.get('authorization') ?? undefined, logUrl: `${req.nextUrl.origin}/api/ingest` })) {
+        for await (const token of client.chat(cleanMessages, model, sessionId, apiKey, {
+          signal: req.signal,
+          reasoningEffort,
+          authToken: req.headers.get('authorization') ?? undefined,
+          logUrl: `${req.nextUrl.origin}/api/ingest`,
+          onLog: db && user ? async (log: InferenceLog) => {
+            const { error: providerError, ...row } = log
+            const result = await db.from('inference_logs').insert({ ...row, user_id: user.id })
+            if (result.error) {
+              await db.from('failed_logs').insert({ payload: { ...log, user_id: user.id }, error: result.error.message })
+            }
+            if (providerError && result.error) console.error('Inference log failed:', result.error.message)
+          } : undefined,
+        })) {
           fullOutput += token
           controller.enqueue(encoder.encode(event({ text: token })))
         }

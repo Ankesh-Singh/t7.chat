@@ -33,7 +33,12 @@ export class LLMClient {
         output_preview: redactPII(output).slice(0, 100),
         error,
       }
-      sendLog(log, options?.authToken, options?.logUrl)
+      try {
+        if (options?.onLog) await options.onLog(log)
+        else await sendLog(log, options?.authToken, options?.logUrl)
+      } catch (logError) {
+        console.error('Inference telemetry failed:', logError)
+      }
     }
   }
 }

@@ -2,7 +2,8 @@
 
 > 📌 [How It Worked](How%20It%20Worked.md) 
 
-![alt text](<Screenshot 2026-10-30 124109.png>)
+![alt text](public/hero.png)
+
 
 ## Run locally
 

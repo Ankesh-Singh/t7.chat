@@ -1,16 +1,8 @@
 # T7 Chat
 
-> 📌 Read [How It Worked](How%20It%20Worked.md) for the architecture, request flow, key decisions, scaling notes, and improvement ideas.
+> 📌 [How It Worked](How%20It%20Worked.md) 
 
-A multi-provider AI chat workspace with bring-your-own-key support, Supabase authentication, streaming responses, and inference telemetry.
-
-## What changed?
-
-- Added authenticated Supabase sessions, messages, provider keys, and inference logs.
-- Added provider support for OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI, and OpenRouter.
-- Added live model discovery after connecting a provider key.
-- Added a dashboard for latency, requests by model, tokens, and recent inference logs.
-- Added Cloudflare Workers deployment through OpenNext.
+![alt text](<Screenshot 2026-10-30 124109.png>)
 
 ## Run locally
 

@@ -39,8 +39,7 @@ export default function DashboardPage() {
   const totalTokens = filtered.reduce((s, l) => s + l.prompt_tokens + l.completion_tokens, 0)
   const totalRequests = filtered.length
   const modelsUsed = [...new Set(filtered.map(l => l.model))].length
-  const errors = filtered.filter(l => l.status !== 'success').length
-  const errorRate = totalRequests > 0 ? Math.round((errors / totalRequests) * 100) : 0
+  const requestsPerModel = modelsUsed > 0 ? (totalRequests / modelsUsed).toFixed(1) : '0'
 
   const half = Math.floor(filtered.length / 2)
   const newAvg = half > 0 ? filtered.slice(0, half).reduce((s, l) => s + l.latency_ms, 0) / half : 0
@@ -100,7 +99,7 @@ export default function DashboardPage() {
                 <StatCard label="Avg Latency" value={`${avgLatency}ms`} sub={latTrend} subColor={latColor} />
                 <StatCard label="Total Requests" value={String(totalRequests)} sub={`${modelsUsed} model${modelsUsed > 1 ? 's' : ''}`} />
                 <StatCard label="Total Tokens" value={totalTokens.toLocaleString()} sub="prompt + completion" />
-                <StatCard label="Error Rate" value={`${errorRate}%`} sub={`${errors} / ${totalRequests}`} valueColor={errorRate > 20 ? 'text-destructive' : undefined} />
+                <StatCard label="Requests / Model" value={requestsPerModel} sub="average across selected models" />
               </div>
             </SectionCard>
 

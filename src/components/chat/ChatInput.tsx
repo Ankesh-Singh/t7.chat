@@ -105,8 +105,8 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
   return (
     <div className="relative shrink-0 bg-gradient-to-t from-background via-background to-transparent px-3 pb-3 pt-2 md:px-6 md:pb-5">
       {open && (
-        <div className="model-popover absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-50 mx-auto flex max-h-[min(570px,calc(100dvh-7rem))] max-w-3xl overflow-hidden rounded-2xl border-0 bg-popover shadow-2xl md:left-6 md:right-6">
-          <aside className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-sidebar/70 py-2 sm:w-16">
+        <div className="model-popover absolute bottom-[calc(100%-0.25rem)] left-1/2 right-auto z-50 flex h-[min(500px,calc(100dvh-7rem))] w-[calc(100vw-1.5rem)] max-w-2xl -translate-x-1/2 overflow-hidden rounded-2xl border-0 bg-popover shadow-2xl">
+          <aside className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-sidebar/70 py-2 sm:w-14">
             {PROVIDERS.map(provider => (
               <button
                 key={provider.id}
@@ -144,7 +144,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                   value={query}
                   onChange={event => setQuery(event.target.value)}
                   placeholder="Search models…"
-                  className="h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  className="h-9 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none placeholder:text-muted-foreground"
                 />
                 <Filter className="h-3.5 w-3.5 text-muted-foreground/60" />
               </div>
@@ -172,7 +172,7 @@ export default function ChatInput({ onSend, onStop, isStreaming, model, setModel
                 <button
                   key={`${item.provider}:${item.id}`}
                   onClick={() => { setModel(item); setOpen(false) }}
-                  className={`group flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-muted ${model.id === item.id && model.provider === item.provider ? 'bg-muted' : ''}`}
+                  className={`group flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted ${model.id === item.id && model.provider === item.provider ? 'bg-muted' : ''}`}
                 >
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-card text-[9px] font-semibold text-muted-foreground">
                     {PROVIDER_LOGOS[item.provider] ? (
